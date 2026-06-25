@@ -296,7 +296,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="0.6";
+const APP_VERSION="0.8";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -376,11 +376,64 @@ const RECIPES_DEFAULT={
 const STEP_BY_MEAL={
  desayuno:"LA NOCHE DE ANTES:\n1) Coge un bote o táper con tapa.\n2) Echa dentro la avena, la leche y el yogur griego. Si la receta lleva miel, échala también. En competición añade también el whey.\n3) Remueve bien con una cuchara hasta que esté todo mezclado.\n4) Tapa y mételo en la nevera toda la noche (mínimo 4 horas). NO se cocina nada: la avena se ablanda sola.\n\nPOR LA MAÑANA:\n5) Saca el bote. Pela el plátano y córtalo en rodajas por encima.\n6) Si lleva manzana, córtala en daditos y échala. Parte las nueces con la mano y espárcelas.\n7) Listo para comer, frío. (Si lo quieres caliente: caliéntalo 1,5–2 min en el microondas ANTES de poner la fruta.)",
  media:"EN EL MOMENTO (o lo dejas hecho y a la nevera):\n1) Coge un táper o un bol.\n2) Echa el skyr.\n3) Pela el plátano y córtalo en rodajas encima. Si lleva manzana, córtala en daditos y añádela.\n4) Echa la miel por encima (si la lleva) y las nueces partidas con la mano.\n5) Si la receta lleva avena cruda, espárcela por encima al final (da un toque crujiente).\n6) Tapa y guárdalo en la nevera hasta que te lo comas. No hay que cocinar nada.",
- comida:"EN EL MOMENTO (de momento; el domingo en lote lo veremos aparte):\n1) Enciende el horno a 200°C.\n2) Pon el pollo en una bandeja. Échale una pizca de sal y la mitad del aceite. Pon la verdura cortada (calabacín, pimiento, lo que tengas) alrededor.\n3) Hornea 20–25 min. Comprueba cortando el pollo: tiene que estar blanco por dentro, nada rosa.\n4) Mientras, cuece el arroz: agua con sal a hervir, echa el arroz y cuécelo los minutos que diga el paquete (12–15 min). Escúrrelo.\n5) Sirve pollo + arroz + verdura. Echa el resto del aceite por encima.\n6) De postre, la fruta.",
- merienda:"EN EL MOMENTO (o lo dejas hecho de antes):\n1) Coge la batidora de vaso (o un vaso alto con batidora de mano).\n2) Echa dentro: la leche, la avena, el skyr (o el whey si lo lleva), la miel (si la lleva) y el plátano pelado y troceado.\n3) Tritura 30–60 segundos hasta que quede espeso y sin grumos.\n4) Pásalo a una botella o táper.\n5) Tómalo antes del entreno de las 18:00. Si lo quieres más llenador, ponle un poco menos de leche. Si lo dejaste hecho, remueve antes.",
- cena:"EN EL MOMENTO (de momento; el domingo en lote lo veremos aparte):\n1) Enciende el horno a 200°C.\n2) Lava las patatas y córtalas en rodajas no muy gruesas (con piel vale). Ponlas en una bandeja con una pizca de sal y la mitad del aceite. Hornéalas 15 min para que ablanden.\n3) Saca la bandeja, pon la merluza encima de las patatas con sal y la verdura al lado. Vuelve a hornear 12–15 min, hasta que el pescado se separe en lascas con el tenedor.\n4) Sirve, echa el resto del aceite y de postre la fruta.\n\nALTERNATIVA MÁS RÁPIDA: cuece las patatas peladas y troceadas en agua hirviendo con sal 15–18 min, y haz la merluza a la plancha 3–4 min por cada lado."
+ comida:"VERSIÓN EXPRÉS (5 min, sin horno) — recomendada entre semana:\n1) Calienta arroz de bolsa de microondas (90 seg) o ten arroz ya cocido de la nevera.\n2) Proteína sin cocinar: escurre una lata de atún al natural, o pollo ya asado de bolsa. (≈ mismos gramos que la receta; el atún tiene algo menos de proteína, así que ponle un pelín más.)\n3) Verdura congelada al microondas 3-4 min, o ensalada de bolsa.\n4) Júntalo, echa el aceite y de postre la fruta. Listo.\n\nVERSIÓN AL HORNO (si tienes tiempo):\n1) Horno 200°C. Pon el pollo con sal y la mitad del aceite, verdura alrededor. Hornea 20-25 min (blanco por dentro, nada rosa).\n2) Cuece el arroz en agua con sal los minutos del paquete y escúrrelo.\n3) Sirve con el resto del aceite y la fruta.\n\nTIP: el domingo veremos cómo dejar arroz y proteína cocinados para toda la semana.",
+ merienda:"EN EL MOMENTO (o lo dejas hecho de antes):\n1) Coge la batidora de vaso (o un vaso alto con batidora de mano).\n2) Echa dentro: la leche, la avena, el skyr (o el whey si lo lleva), la miel (si la lleva) y el plátano pelado y troceado.\n3) Tritura 30–60 segundos hasta que quede espeso y sin grumos.\n4) Pásalo a una botella o táper.\n5) Tómalo antes del entreno de las 18:00. Si lo quieres más llenador, ponle un poco menos de leche. Si lo dejaste hecho, remueve antes.\n\nTIP: déjalo hecho por la mañana en la botella y al sacarlo del frigo solo agítalo.",
+ cena:"VERSIÓN EXPRÉS (5 min, sin horno) — recomendada entre semana:\n1) Patata: usa una bolsa de patata para microondas (5-6 min) o patata ya cocida.\n2) Pescado sin cocinar: una lata de caballa, sardinas o atún (al natural o en aceite de oliva escurrido). Cero cocción. (Ajusta un poco la cantidad: la caballa/sardina tienen más grasa, así que baja el aceite añadido.)\n3) Verdura congelada al microondas o ensalada de bolsa.\n4) Junta, echa el aceite que toque y la fruta de postre.\n\nVERSIÓN AL HORNO/PLANCHA (si tienes tiempo):\n1) Patata en rodajas con sal y la mitad del aceite, horno 200°C 15 min; añade la merluza encima 12-15 min.\n2) O más rápido: patata cocida en agua 15-18 min + merluza a la plancha 3-4 min por lado.\n\nTIP: tener latas de pescado y bolsas de arroz/patata de microondas en casa es lo que más tiempo te ahorra."
 };
 function buildSteps(){const o={};INTENS.forEach(it=>{o[it]={};MEALKEYS.forEach(mk=>{o[it][mk]=STEP_BY_MEAL[mk];});});return o;}
+const RECIPE_NAME={desayuno:"Overnight oats",media:"Bowl de skyr",comida:"Pollo + arroz + verdura",merienda:"Batido de avena",cena:"Merluza + patata"};
+const UNIT_PLURAL={"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"]};
+// ingredientes base a 81,5 kg. t: "g"(def)/"ml"/"u"(unidad fija). u: gramos por unidad.
+const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pollo:[165,31,0,3.6],merluza:[92,19,0,1.5],patata:[80,1.8,18,0.1],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
+const RECIPES_ING={
+ descanso:{
+  desayuno:[{n:"avena",k:"avena",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:170},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  media:[{n:"skyr",k:"skyr",g:180},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:10},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  comida:[{n:"pollo (cocido)",k:"pollo",g:115},{n:"arroz cocido",k:"arroz",g:170},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:26},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
+  merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"skyr",k:"skyr",g:130},{n:"miel",k:"miel",g:5}],
+  cena:[{n:"merluza",k:"merluza",g:175},{n:"patata cocida",k:"patata",g:120},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:20},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
+ },
+ suave:{
+  desayuno:[{n:"avena",k:"avena",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:190},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:20},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  media:[{n:"skyr",k:"skyr",g:155},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:35},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  comida:[{n:"pollo (cocido)",k:"pollo",g:105},{n:"arroz cocido",k:"arroz",g:285},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:31},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
+  merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"skyr",k:"skyr",g:130},{n:"miel",k:"miel",g:35}],
+  cena:[{n:"merluza",k:"merluza",g:165},{n:"patata cocida",k:"patata",g:240},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:24},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
+ },
+ moderado:{
+  desayuno:[{n:"avena",k:"avena",g:80},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:140},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  media:[{n:"skyr",k:"skyr",g:120},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:65},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  comida:[{n:"pollo (cocido)",k:"pollo",g:95},{n:"arroz cocido",k:"arroz",g:405},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:33},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
+  merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"skyr",k:"skyr",g:115},{n:"miel",k:"miel",g:30}],
+  cena:[{n:"merluza",k:"merluza",g:155},{n:"patata cocida",k:"patata",g:365},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:26},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
+ },
+ intenso:{
+  desayuno:[{n:"avena",k:"avena",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:90},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  media:[{n:"skyr",k:"skyr",g:120},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:70},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  comida:[{n:"pollo (cocido)",k:"pollo",g:90},{n:"arroz cocido",k:"arroz",g:535},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:37},{n:"plátano",k:"platano",g:120,t:"u",u:120}],
+  merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:60},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"skyr",k:"skyr",g:100},{n:"miel",k:"miel",g:40}],
+  cena:[{n:"merluza",k:"merluza",g:135},{n:"patata cocida",k:"patata",g:490},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:30},{n:"plátano",k:"platano",g:120,t:"u",u:120}]
+ },
+ competicion:{
+  desayuno:[{n:"avena",k:"avena",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:105},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:4,t:"u",u:4}],
+  media:[{n:"skyr",k:"skyr",g:140},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:70},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:8,t:"u",u:4}],
+  comida:[{n:"pollo (cocido)",k:"pollo",g:90},{n:"arroz cocido",k:"arroz",g:575},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:14},{n:"plátano",k:"platano",g:120,t:"u",u:120}],
+  merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:75},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"whey",k:"whey",g:15},{n:"miel",k:"miel",g:40}],
+  cena:[{n:"merluza",k:"merluza",g:135},{n:"patata cocida",k:"patata",g:530},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:12},{n:"plátano",k:"platano",g:120,t:"u",u:120}]
+ }
+};
+function ceilTo(x,s){return Math.ceil(x/s)*s;}
+function recipeScale(wd,it){const base=dayMacros(81.5,14.1,1.45,it).kt;const now=dayMacrosFor(wd).kt;return base?now/base:1;}
+function ucount(x){return Math.max(1,Math.round(x.g/x.u));}
+function sgram(x,sf){if(x.t==="u")return ucount(x)*x.u;const val=x.g*sf;const step=val<40?5:10;return ceilTo(val,step);}
+function scaleIng(x,sf){
+  if(x.t==="u"){const c=ucount(x);const pl=UNIT_PLURAL[x.n]||[x.n,x.n];return `<b>${c}</b> ${c===1?pl[0]:pl[1]}`;}
+  const unit=x.t==="ml"?"ml":"g";const g=sgram(x,sf);
+  const extra=x.n==="aceite"?` <span style="color:var(--faint)">(~${Math.max(1,Math.round(g/10))} cda)</span>`:"";
+  return `<b>${g}</b> ${unit} ${x.n}${extra}`;
+}
+function recipeMacros(ings,sf){let kt=0,P=0,C=0,Fz=0;ings.forEach(x=>{const g=sgram(x,sf);const f=FOOD[x.k];if(!f)return;kt+=f[0]*g/100;P+=f[1]*g/100;C+=f[2]*g/100;Fz+=f[3]*g/100;});return {kt:Math.round(kt),P:Math.round(P),C:Math.round(C),F:Math.round(Fz)};}
+function dayRecipeMacros(wd){const it=dayIntensity(wd);const sf=recipeScale(wd,it);const t={kt:0,P:0,C:0,F:0};MEALKEYS.forEach(mk=>{const m=recipeMacros(RECIPES_ING[it][mk]||[],sf);t.kt+=m.kt;t.P+=m.P;t.C+=m.C;t.F+=m.F;});return t;}
 function defaultState(){
   const train=[{time:"10:00",label:"Entreno agua",type:"train"},{time:"18:00",label:"Entreno tarde",type:"train"}];
   const sched={};
@@ -752,7 +805,7 @@ function renderComidaWeek(body){
   let h="";
   if(!S.weekPlan)h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan en Planificar; muestro una estimación en vivo con tus intensidades actuales.</div></div>';
   h+='<div class="label" style="margin:2px 2px 8px">La semana · toca un día</div><div class="card flush">';
-  WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayMacrosFor(wd);
+  WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayRecipeMacros(wd);
     h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
       <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
@@ -760,51 +813,46 @@ function renderComidaWeek(body){
   h+='</div>';body.innerHTML=h;}
 function openComidaDay(wd){comidaWd=wd;renderComida();window.scrollTo(0,0);}
 function backComidaWeek(){comidaWd=null;renderComida();window.scrollTo(0,0);}
-function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const dm=dayMacrosFor(wd);
+function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);const dm=dayRecipeMacros(wd);const goal=dayMacrosFor(wd);
   let h=`<button class="page-back" onclick="backComidaWeek()" style="padding:2px 0 10px">‹ Semana</button>
    <div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
      <div><div class="label" style="margin:0 0 2px">${WDLABEL_LONG[wd]}</div>
        <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span></div>
-     <div class="num" style="font-weight:700;color:var(--ember);font-size:20px">${dm.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div></div>
+     <div style="text-align:right"><div class="num" style="font-weight:700;color:var(--ember);font-size:20px">${dm.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div>
+       <div class="r-s" style="color:var(--faint)">P ${dm.P} · C ${dm.C} · G ${dm.F} · obj ${goal.kt}</div></div></div>
    <div class="card flush">`;
-  MEALKEYS.forEach((mk,i)=>{const mm=mealMacros(dm,i);const rec=(S.recipes[it]&&S.recipes[it][mk])||"";
-    const firstline=rec.split("\n")[0];const prev=firstline?(firstline.length>52?firstline.slice(0,52)+"…":firstline):"Sin receta — toca para escribir";
+  MEALKEYS.forEach((mk,i)=>{const mm=recipeMacros(RECIPES_ING[it][mk]||[],sf);const prev=RECIPE_NAME[mk]||"";
     h+=`<button class="mrow" style="width:100%;align-items:flex-start;padding:14px 16px" onclick="openRecipe('${wd}','${mk}')">
       <div style="flex:1;text-align:left">
         <div class="r-t">${MEAL_SLOTS[i]} <span class="tag meal" style="margin-left:6px">${mm.kt} kcal</span></div>
         <div class="r-s" style="margin-top:3px">P ${mm.P} · C ${mm.C} · G ${mm.F} g</div>
-        <div class="r-s" style="margin-top:5px;color:${rec?'var(--muted)':'var(--faint)'}">${esc(prev)}</div></div>
+        <div class="r-s" style="margin-top:5px;color:var(--muted)">${esc(prev)}</div></div>
       <span class="chev" style="align-self:center">›</span></button>`;});
   h+='</div>';body.innerHTML=h;}
-function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const dm=dayMacrosFor(wd);const mm=mealMacros(dm,i);const d=ENGINE.dayTypes[it];
-  const rec=(S.recipes[it]&&S.recipes[it][mk])||"";
-  document.getElementById("pageTitle").textContent=MEAL_SLOTS[i];
+function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];
+  const ings=(RECIPES_ING[it]&&RECIPES_ING[it][mk])||[];const sf=recipeScale(wd,it);const mm=recipeMacros(ings,sf);
+  const wkg=S.weekPlan&&S.weekPlan.planWeight?S.weekPlan.planWeight:num(S.perfil).peso;
+  const list=ings.map(x=>`<div class="row" style="padding:8px 0"><span class="zdot" style="background:${d.c}"></span><div class="grow">${scaleIng(x,sf)}</div></div>`).join("");
+  document.getElementById("pageTitle").textContent=RECIPE_NAME[mk]||MEAL_SLOTS[i];
   document.getElementById("pageBody").innerHTML=`
-    <span class="trendchip" style="background:${d.c}22;color:${d.c}">${d.label} · ${WDLABEL_LONG[wd]}</span>
+    <span class="trendchip" style="background:${d.c}22;color:${d.c}">${d.label} · ${WDLABEL_LONG[wd]} · ${MEAL_SLOTS[i]}</span>
     <div class="macros" style="margin:14px 0">
       <div class="macro kc"><div class="v num">${mm.kt}</div><div class="u">kcal</div></div>
       <div class="macro p"><div class="v num">${mm.P}</div><div class="u">prot g</div></div>
       <div class="macro"><div class="v num">${mm.C}</div><div class="u">carbo g</div></div>
       <div class="macro"><div class="v num">${mm.F}</div><div class="u">grasa g</div></div></div>
-    <div class="field"><label>Ingredientes</label>
-      <textarea class="input" id="recText" rows="6" style="resize:vertical;line-height:1.5">${esc(rec)}</textarea></div>
-    <div class="add-line" style="margin-top:0">
-      <button class="btn primary" style="flex:1" onclick="saveRecipe('${it}','${mk}')">Guardar ingredientes</button>
-      <button class="btn teal" style="flex:1" onclick="toggleSteps('${it}','${mk}')">Abrir receta</button>
-    </div>
+    <div class="label" style="margin:18px 2px 6px">Ingredientes · ajustado a ${fmt(wkg)} kg</div>
+    <div class="card flush" style="padding:4px 16px">${list}</div>
+    <button class="btn teal" style="margin-top:14px;width:100%" onclick="toggleSteps('${it}','${mk}')">Abrir receta</button>
     <div id="stepsBox" style="display:none;margin-top:14px"></div>
-    <div class="note" style="margin-top:12px">Los ingredientes valen para <b>todos los días ${d.label}</b> (se escriben una vez). Cantidades a tu peso de plan; si cambias mucho de peso, revísalas.</div>`;
+    <div class="note" style="margin-top:12px">Cantidades calculadas a tu peso de plan y <b>redondeadas hacia arriba</b> para que no te quedes con hambre. Plátanos y nueces van enteros. La forma de prepararlo es la misma en todas las intensidades.</div>`;
   pageReturn=renderComida;document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function toggleSteps(it,mk){const box=document.getElementById("stepsBox");
   if(box.style.display!=="none"){box.style.display="none";return;}
-  const pasos=(S.steps[it]&&S.steps[it][mk])||"";
+  const pasos=STEP_BY_MEAL[mk]||"";
   box.innerHTML='<div class="label" style="margin-bottom:8px">Paso a paso</div><div class="card" id="stepsCard"></div>';
-  document.getElementById("stepsCard").style.whiteSpace="pre-wrap";
-  document.getElementById("stepsCard").style.lineHeight="1.6";
-  document.getElementById("stepsCard").textContent=pasos;
+  const card=document.getElementById("stepsCard");card.style.whiteSpace="pre-wrap";card.style.lineHeight="1.6";card.textContent=pasos;
   box.style.display="block";box.scrollIntoView({behavior:"smooth",block:"nearest"});}
-function saveRecipe(it,mk){const v=document.getElementById("recText").value;
-  if(!S.recipes[it])S.recipes[it]={};S.recipes[it][mk]=v;save();closePage();toast("Ingredientes guardados");}
 
 /* ---------- AVISOS ---------- */
 function renderAvisos(){const tl=document.getElementById("taskList");tl.innerHTML="";if(!S.tasks.length)tl.innerHTML='<div class="empty">Sin recordatorios todavía.</div>';
