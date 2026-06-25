@@ -248,11 +248,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 
   <!-- COMIDA -->
   <section class="view" id="v-comida">
-    <div class="card"><div class="label">Objetivo de hoy · <span id="nutDayLabel">—</span></div><div class="macros" id="nutMacros"></div>
-      <div class="divider"></div><div class="note">Motor: TMB Katch-McArdle × factor + coste del entreno. Cambia con tu peso del pesaje de las 21:00.</div></div>
-    <div class="section-h"><h2>Qué comer hoy</h2></div>
-    <div class="card flush" id="mealSlots"></div>
-    <div class="card"><div class="note warn">Las recetas las escribiremos juntos en el siguiente paso.</div></div>
+    <div id="comidaBody"></div>
   </section>
 
   <!-- AVISOS -->
@@ -300,7 +296,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="0.4";
+const APP_VERSION="0.5";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -338,6 +334,45 @@ const WD=["mon","tue","wed","thu","fri","sat","sun"];
 const WDLABEL={mon:"Lun",tue:"Mar",wed:"Mié",thu:"Jue",fri:"Vie",sat:"Sáb",sun:"Dom"};
 const MEAL_SLOTS=["Desayuno","Media mañana","Comida","Merienda / Pre","Cena"];
 const MEAL_SPLIT=[0.22,0.13,0.28,0.15,0.22];
+const MEALKEYS=["desayuno","media","comida","merienda","cena"];
+const WDLABEL_LONG={mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado",sun:"Domingo"};
+const RECIPES_DEFAULT={
+ descanso:{
+  desayuno:"Overnight oats · 40 g avena · 130 ml leche · 150 g yogur griego · 1 plátano · 3 nueces.\nNoche antes: mezcla avena+leche+yogur y a la nevera. Por la mañana añade plátano y nueces.",
+  media:"Bowl · 190 g skyr · 1 plátano · 2 nueces. Montar en táper.",
+  comida:"Pollo al horno + arroz · 140 g pollo cocido · 180 g arroz cocido · 150 g verdura · 2 cdas aceite · 1 manzana.\nBandeja de pollo+verdura al horno 200°C 25 min. Arroz aparte.",
+  merienda:"Batido · 100 ml leche · 10 g avena · 1 plátano · 140 g skyr. Triturar.",
+  cena:"Merluza al horno + patata · 135 g merluza · 195 g patata cocida · 150 g verdura · 2 cdas aceite · 1 manzana."
+ },
+ suave:{
+  desayuno:"Overnight oats · 55 g avena · 140 ml leche · 150 g yogur griego · 1 plátano · 60 g manzana · 3 nueces · 8 g miel.",
+  media:"Bowl · 190 g skyr · 1 plátano · 60 g manzana · 10 g miel · 2 nueces.",
+  comida:"Pollo al horno + arroz · 140 g pollo cocido · 300 g arroz cocido · 150 g verdura · 2 cdas aceite · 1 manzana.",
+  merienda:"Batido · 120 ml leche · 25 g avena · 1 plátano · 140 g skyr · 8 g miel.",
+  cena:"Merluza al horno + patata · 135 g merluza · 350 g patata cocida · 150 g verdura · 2 cdas aceite · 1 manzana."
+ },
+ moderado:{
+  desayuno:"Overnight oats · 75 g avena · 150 ml leche · 175 g yogur griego · 1 plátano · 80 g manzana · 4 nueces · 15 g miel.",
+  media:"Bowl · 190 g skyr · 1 plátano · 120 g manzana · 25 g avena cruda · 15 g miel · 2 nueces.",
+  comida:"Pollo al horno + arroz · 140 g pollo cocido · 420 g arroz cocido · 150 g verdura · 2-3 cdas aceite · 1 manzana.",
+  merienda:"Batido · 150 ml leche · 45 g avena · 1 plátano · 140 g skyr · 15 g miel.",
+  cena:"Merluza al horno + patata · 135 g merluza · 510 g patata cocida · 150 g verdura · 2 cdas aceite · 1 manzana."
+ },
+ intenso:{
+  desayuno:"Overnight oats · 105 g avena · 180 ml leche · 175 g yogur griego · 1 plátano · 100 g manzana · 4 nueces · 30 g miel.",
+  media:"Bowl · 190 g skyr · 1 plátano · 120 g manzana · 45 g avena cruda · 25 g miel · 3 nueces.",
+  comida:"Pollo al horno + arroz · 135 g pollo cocido · 560 g arroz cocido · 150 g verdura · 3 cdas aceite · 1 plátano.",
+  merienda:"Batido · 200 ml leche · 55 g avena · 2 plátanos · 110 g skyr · 15 g miel.",
+  cena:"Merluza al horno + patata · 130 g merluza · 680 g patata cocida · 150 g verdura · 3 cdas aceite · 1 plátano."
+ },
+ competicion:{
+  desayuno:"Overnight oats · 95 g avena · 160 ml leche · 150 g yogur griego · 15 g whey · 1 plátano · 120 g manzana · 1 nuez · 45 g miel.",
+  media:"Bowl · 215 g skyr · 1 plátano · 120 g manzana · 25 g avena cruda · 30 g miel.",
+  comida:"Pollo al horno + arroz (magro) · 135 g pollo cocido · 600 g arroz cocido · 150 g verdura · 1 cda aceite · 1 plátano.",
+  merienda:"Batido · 150 ml leche · 40 g avena · 2 plátanos · 15 g whey · 40 g miel.",
+  cena:"Merluza al horno + patata (magro) · 130 g merluza · 730 g patata cocida · 150 g verdura · 1 cda aceite · 1 plátano."
+ }
+};
 function defaultState(){
   const train=[{time:"10:00",label:"Entreno agua",type:"train"},{time:"18:00",label:"Entreno tarde",type:"train"}];
   const sched={};
@@ -347,6 +382,7 @@ function defaultState(){
   return {perfil:{nombre:"Manuel Gironés Benavente",sexo:"Hombre",nacimiento:"2008-04-15",
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
     schedule:sched,intensityByDay,weekPlan:null,meals:{},
+    recipes:JSON.parse(JSON.stringify(RECIPES_DEFAULT)),
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"07:30",label:"Pesarme en ayunas"}],
     lastWeigh:null,lastPlan:null};
@@ -360,6 +396,8 @@ function migrate(s){
   if(!("weekPlan" in s))s.weekPlan=null;
   if(!s.schedule)s.schedule=d.schedule;
   if(!s.meals)s.meals={};
+  if(!s.recipes)s.recipes=JSON.parse(JSON.stringify(RECIPES_DEFAULT));
+  INTENS.forEach(it=>{s.recipes[it]=Object.assign({},RECIPES_DEFAULT[it],s.recipes[it]||{});});
   if(!Array.isArray(s.metrics))s.metrics=d.metrics;
   if(!Array.isArray(s.tasks))s.tasks=d.tasks;
   delete s.dayType; delete s.todayType;
@@ -503,7 +541,7 @@ function trendChip(arr,unit,dec){if(arr.length<2)return `<span class="trendchip 
   return `<span class="trendchip ${c}">${ar} ${d>0?"+":""}${fmt(d,dec)} ${unit} vs anterior</span>`;}
 
 /* ---------- página completa de métrica ---------- */
-function openPage(k){const p=S.perfil,n=num(p);let title="",body="";
+function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title="",body="";
   const kcHoy=dayMacros(n.peso,n.grasa,n.factor,curType()).kt;
   if(k==="peso"){const arr=arrRaw("peso"),tmb=tmbKatch(lean(n.peso,n.grasa)),gb=getBase(n.peso,n.grasa,n.factor);
     title="Peso";body=`<div class="hero-val num">${fmt(n.peso)}<span class="un">kg</span></div>${trendChip(arr,"kg",1)}
@@ -556,7 +594,8 @@ function openPage(k){const p=S.perfil,n=num(p);let title="",body="";
   document.getElementById("pageTitle").textContent=title;
   document.getElementById("pageBody").innerHTML=body;
   document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-function closePage(){document.getElementById("page").classList.remove("show");renderPerfil();}
+let pageReturn=renderPerfil;
+function closePage(){document.getElementById("page").classList.remove("show");if(pageReturn)pageReturn();}
 document.getElementById("pageBack").onclick=closePage;
 function savePageField(field,inputId,k){const v=parseFloat(document.getElementById(inputId).value);
   if(isNaN(v)){toast("Valor no válido");return;}S.perfil[field]=v;
@@ -691,14 +730,58 @@ document.getElementById("savePlanBtn").onclick=savePlan;
 document.getElementById("sAdd").onclick=()=>{const time=document.getElementById("sTime").value,label=document.getElementById("sLabel").value.trim(),type=document.getElementById("sType").value;
   if(!label){toast("Ponle un nombre");return;}(S.schedule[selWeekday]=S.schedule[selWeekday]||[]).push({time,label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
 
-/* ---------- COMIDA ---------- */
-function renderComida(){const tp=todaysPlan();document.getElementById("nutDayLabel").textContent=tp.label;
-  renderMacroRowVals("nutMacros",tp.macros);const dk=isoToday();
-  S.meals[dk]=S.meals[dk]||MEAL_SLOTS.map(s=>({slot:s,text:""}));
-  const cont=document.getElementById("mealSlots");cont.innerHTML="";
-  S.meals[dk].forEach((ml,i)=>{const kc=Math.round(tp.macros.kt*MEAL_SPLIT[i]);const r=document.createElement("div");r.className="row";r.style.padding="14px 16px";r.style.alignItems="flex-start";
-    r.innerHTML=`<div style="flex:1"><div class="r-t">${ml.slot} <span class="tag meal" style="margin-left:6px">${kc} kcal</span></div><input class="input" placeholder="por definir" value="${esc(ml.text)}" style="margin-top:8px"></div>`;
-    const inp=r.querySelector("input");inp.onchange=()=>{S.meals[dk][i].text=inp.value;save();};cont.appendChild(r);});}
+/* ---------- COMIDA (semana -> día -> receta) ---------- */
+let comidaWd=null;
+function dayIntensity(wd){return (S.weekPlan&&S.weekPlan.days[wd]&&S.weekPlan.days[wd].intensity)||(S.intensityByDay&&S.intensityByDay[wd])||"moderado";}
+function dayMacrosFor(wd){if(S.weekPlan&&S.weekPlan.days[wd])return S.weekPlan.days[wd].macros;const n=num(S.perfil);return dayMacros(n.peso,n.grasa,n.factor,dayIntensity(wd));}
+function mealMacros(dm,i){const f=MEAL_SPLIT[i];return {kt:Math.round(dm.kt*f),P:Math.round(dm.P*f),C:Math.round(dm.C*f),F:Math.round(dm.F*f)};}
+function renderComida(){const body=document.getElementById("comidaBody");
+  if(comidaWd)renderComidaDay(body,comidaWd);else renderComidaWeek(body);}
+function renderComidaWeek(body){
+  let h="";
+  if(!S.weekPlan)h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan en Planificar; muestro una estimación en vivo con tus intensidades actuales.</div></div>';
+  h+='<div class="label" style="margin:2px 2px 8px">La semana · toca un día</div><div class="card flush">';
+  WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayMacrosFor(wd);
+    h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
+      <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
+      <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
+      <span class="m-prev"><span class="m-val num">${m.kt} kcal</span><span class="chev">›</span></span></button>`;});
+  h+='</div>';body.innerHTML=h;}
+function openComidaDay(wd){comidaWd=wd;renderComida();window.scrollTo(0,0);}
+function backComidaWeek(){comidaWd=null;renderComida();window.scrollTo(0,0);}
+function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const dm=dayMacrosFor(wd);
+  let h=`<button class="page-back" onclick="backComidaWeek()" style="padding:2px 0 10px">‹ Semana</button>
+   <div class="card" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+     <div><div class="label" style="margin:0 0 2px">${WDLABEL_LONG[wd]}</div>
+       <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span></div>
+     <div class="num" style="font-weight:700;color:var(--ember);font-size:20px">${dm.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div></div>
+   <div class="card flush">`;
+  MEALKEYS.forEach((mk,i)=>{const mm=mealMacros(dm,i);const rec=(S.recipes[it]&&S.recipes[it][mk])||"";
+    const firstline=rec.split("\n")[0];const prev=firstline?(firstline.length>52?firstline.slice(0,52)+"…":firstline):"Sin receta — toca para escribir";
+    h+=`<button class="mrow" style="width:100%;align-items:flex-start;padding:14px 16px" onclick="openRecipe('${wd}','${mk}')">
+      <div style="flex:1;text-align:left">
+        <div class="r-t">${MEAL_SLOTS[i]} <span class="tag meal" style="margin-left:6px">${mm.kt} kcal</span></div>
+        <div class="r-s" style="margin-top:3px">P ${mm.P} · C ${mm.C} · G ${mm.F} g</div>
+        <div class="r-s" style="margin-top:5px;color:${rec?'var(--muted)':'var(--faint)'}">${esc(prev)}</div></div>
+      <span class="chev" style="align-self:center">›</span></button>`;});
+  h+='</div>';body.innerHTML=h;}
+function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const dm=dayMacrosFor(wd);const mm=mealMacros(dm,i);const d=ENGINE.dayTypes[it];
+  const rec=(S.recipes[it]&&S.recipes[it][mk])||"";
+  document.getElementById("pageTitle").textContent=MEAL_SLOTS[i];
+  document.getElementById("pageBody").innerHTML=`
+    <span class="trendchip" style="background:${d.c}22;color:${d.c}">${d.label} · ${WDLABEL_LONG[wd]}</span>
+    <div class="macros" style="margin:14px 0">
+      <div class="macro kc"><div class="v num">${mm.kt}</div><div class="u">kcal</div></div>
+      <div class="macro p"><div class="v num">${mm.P}</div><div class="u">prot g</div></div>
+      <div class="macro"><div class="v num">${mm.C}</div><div class="u">carbo g</div></div>
+      <div class="macro"><div class="v num">${mm.F}</div><div class="u">grasa g</div></div></div>
+    <div class="field"><label>Receta · qué comer</label>
+      <textarea class="input" id="recText" rows="8" style="resize:vertical;line-height:1.5">${esc(rec)}</textarea></div>
+    <button class="btn primary" onclick="saveRecipe('${it}','${mk}')">Guardar receta</button>
+    <div class="note" style="margin-top:10px">Vale para <b>todos los días ${d.label}</b> (la escribes una vez). Cantidades a tu peso de plan; si cambias mucho de peso, revísala.</div>`;
+  pageReturn=renderComida;document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function saveRecipe(it,mk){const v=document.getElementById("recText").value;
+  if(!S.recipes[it])S.recipes[it]={};S.recipes[it][mk]=v;save();closePage();toast("Receta guardada");}
 
 /* ---------- AVISOS ---------- */
 function renderAvisos(){const tl=document.getElementById("taskList");tl.innerHTML="";if(!S.tasks.length)tl.innerHTML='<div class="empty">Sin recordatorios todavía.</div>';
@@ -732,6 +815,7 @@ function nav(v){document.querySelectorAll(".view").forEach(x=>x.classList.remove
   document.getElementById("hEyebrow").textContent=v==="perfil"?"Mi plan":TITLES[v];
   document.getElementById("hTitle").textContent=TITLES[v];
   document.getElementById("hDate").textContent=v==="hoy"?dateStr():"";
+  if(v==="comida")comidaWd=null;
   ({perfil:renderPerfil,hoy:renderHoy,planificar:renderPlanificar,comida:renderComida,avisos:renderAvisos}[v])();window.scrollTo(0,0);}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>nav(t.dataset.v));
 function tick(){const d=new Date();document.getElementById("pClock").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
