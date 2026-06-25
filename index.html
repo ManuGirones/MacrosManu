@@ -296,7 +296,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="0.8";
+const APP_VERSION="0.9";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -382,9 +382,49 @@ const STEP_BY_MEAL={
 };
 function buildSteps(){const o={};INTENS.forEach(it=>{o[it]={};MEALKEYS.forEach(mk=>{o[it][mk]=STEP_BY_MEAL[mk];});});return o;}
 const RECIPE_NAME={desayuno:"Overnight oats",media:"Bowl de skyr",comida:"Pollo + arroz + verdura",merienda:"Batido de avena",cena:"Merluza + patata"};
-const UNIT_PLURAL={"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"]};
+const UNIT_PLURAL={"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"],"huevo":["huevo","huevos"]};
 // ingredientes base a 81,5 kg. t: "g"(def)/"ml"/"u"(unidad fija). u: gramos por unidad.
-const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pollo:[165,31,0,3.6],merluza:[92,19,0,1.5],patata:[80,1.8,18,0.1],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
+const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],boniato:[90,1.6,20,0.1],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],bacalao:[105,23,0,1],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],alubias:[120,8,22,0.5],tomate:[80,1.5,9,4],espinacas:[23,3,1,0.4],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
+const RAWF={arroz:0.37,pasta:0.42,patata:1.05,boniato:1.05,pollo:1.43,pavo:1.43,ternera:1.4,salmon:1.25,merluza:1.25,bacalao:1.25,cerdo:1.4};
+const FLOORG={pollo:70,pavo:70,ternera:80,merluza:95,bacalao:95,salmon:95,cerdo:80,atun:80,huevo:150};
+const FOODNAME={arroz:"arroz cocido",pasta:"pasta cocida",patata:"patata cocida",boniato:"boniato",pollo:"pollo (cocido)",pavo:"pavo (cocido)",ternera:"ternera magra (cocida)",salmon:"salmón (cocido)",merluza:"merluza (cocida)",bacalao:"bacalao (cocido)",cerdo:"lomo de cerdo (cocido)",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas cocidas",garbanzos:"garbanzos cocidos",alubias:"alubias cocidas",tomate:"tomate/sofrito",espinacas:"espinacas",verdura:"verdura"};
+// Biblioteca de 16 platos. prot/carb = clave FOOD; extra fijo; tags cuotas; cons conservación; comodin sale más
+const LIBRARY=[
+ {id:1,name:"Pollo al horno con arroz y verdura",prot:"pollo",carb:"arroz",extra:[],tags:["pollo"],cons:["N3","CONG"],comodin:true},
+ {id:2,name:"Pavo salteado con tomate y arroz",prot:"pavo",carb:"arroz",extra:[["tomate",60]],tags:["pollo"],cons:["CONG"],comodin:false},
+ {id:3,name:"Curry suave de pollo con arroz",prot:"pollo",carb:"arroz",extra:[],tags:["pollo"],cons:["CONG"],comodin:false},
+ {id:4,name:"Albóndigas de ternera en tomate con arroz",prot:"ternera",carb:"arroz",extra:[["tomate",60]],tags:["carneroja"],cons:["CONG"],comodin:false},
+ {id:5,name:"Pasta con pollo y tomate",prot:"pollo",carb:"pasta",extra:[["tomate",60]],tags:["pollo"],cons:["N3","CONG"],comodin:true},
+ {id:6,name:"Pollo a la plancha con boniato",prot:"pollo",carb:"boniato",extra:[],tags:["pollo"],cons:["N3","CONG"],comodin:false},
+ {id:7,name:"Boloñesa de ternera con pasta",prot:"ternera",carb:"pasta",extra:[["tomate",60]],tags:["carneroja"],cons:["CONG"],comodin:true},
+ {id:8,name:"Chili con carne y alubias con arroz",prot:"ternera",carb:"arroz",extra:[["alubias",120]],tags:["carneroja","legumbre"],cons:["CONG"],comodin:false},
+ {id:9,name:"Ternera guisada con patata y zanahoria",prot:"ternera",carb:"patata",extra:[],tags:["carneroja"],cons:["N3","CONG"],comodin:false},
+ {id:10,name:"Lomo de cerdo al horno con patata",prot:"cerdo",carb:"patata",extra:[],tags:["cerdo"],cons:["N3","CONG"],comodin:false},
+ {id:11,name:"Salmón al horno con patata y verdura",prot:"salmon",carb:"patata",extra:[],tags:["pescado","azul"],cons:["FRESCO"],comodin:false},
+ {id:12,name:"Merluza al horno con arroz y verdura",prot:"merluza",carb:"arroz",extra:[],tags:["pescado"],cons:["FRESCO","CONG"],comodin:true},
+ {id:13,name:"Arroz con atún y tomate",prot:"atun",carb:"arroz",extra:[["tomate",60]],tags:["pescado"],cons:["N3"],comodin:true},
+ {id:14,name:"Lentejas guisadas con patata y huevo",prot:null,carb:"patata",extra:[["lentejas",220],["huevo",50]],tags:["legumbre"],cons:["N3","CONG"],comodin:true},
+ {id:15,name:"Garbanzos con espinacas, huevo y arroz",prot:null,carb:"arroz",extra:[["garbanzos",200],["huevo",100],["espinacas",80]],tags:["legumbre","huevo"],cons:["N3","CONG"],comodin:false},
+ {id:16,name:"Tortilla de patata con cebolla",prot:"huevo",carb:"patata",extra:[],tags:["huevo"],cons:["N3"],comodin:false}
+];
+const DISH_STEPS={
+ 1:"1) Horno 200°C. Pollo con sal y un poco de aceite, verdura cortada alrededor. 20-25 min (blanco por dentro).\n2) Arroz en agua con sal los minutos del paquete; escurre.\nEXPRÉS: arroz de bolsa al micro + lata de atún o pollo asado de bolsa.",
+ 2:"1) Sartén: dora el pavo picado, añade cebolla y el tomate. 8-10 min.\n2) Arroz aparte. Mézclalo o sírvelo al lado.",
+ 3:"1) Olla: pollo a dados + cebolla, sella. Añade tomate (o leche de coco ligera) + curry. 15 min.\n2) Arroz aparte.",
+ 4:"1) Albóndigas (compradas o caseras) en un bote de tomate, 20 min a fuego lento.\n2) Arroz aparte.",
+ 5:"1) Cuece la pasta. 2) Sartén: pollo a tiras + tomate. 3) Junta todo. Listo, aguanta bien en nevera.",
+ 6:"1) Boniato al horno 200°C 30 min (o al micro 6-8 min). 2) Pollo a la plancha 3-4 min por lado. 3) Verdura.",
+ 7:"1) Sofríe cebolla, añade ternera picada y dora. Echa el tomate, 20 min.\n2) Pasta aparte. (Rey del congelador: haz tanda y congela.)",
+ 8:"1) Olla: dora la carne, añade alubias de bote escurridas + tomate + especias (comino, pimentón). 15 min.\n2) Arroz aparte.",
+ 9:"1) Olla: sella la ternera, añade patata y zanahoria en trozos + caldo. 40 min tapado.",
+ 10:"1) Bandeja: lomo + patatas en gajos + cebolla, sal y aceite. Horno 200°C 30 min.",
+ 11:"1) Bandeja: salmón + patata en rodajas + verdura. Horno 200°C 18 min. (Fresco: cómelo lun/mar.)",
+ 12:"1) Bandeja: merluza + verdura con sal y poco aceite. Horno 200°C 12-15 min. 2) Arroz aparte.\nEXPRÉS: merluza a la plancha 3-4 min/lado.",
+ 13:"1) Cuece el arroz. 2) Mézclalo con atún escurrido y tomate frito. Listo en frío o caliente. (La lata aguanta: ideal miércoles.)",
+ 14:"1) Olla: sofríe cebolla, añade lentejas (bote o cocidas), patata en dados, zanahoria y caldo. 20 min.\n2) Sirve con 1 huevo duro encima para subir proteína.",
+ 15:"1) Olla: garbanzos de bote + espinacas + tomate, 10 min. Añade huevo (escalfado o duro).\n2) Arroz aparte.",
+ 16:"1) Cuece/fríe patata y cebolla. 2) Bate los huevos, mezcla y cuaja la tortilla en la sartén. (Gran cena; aguanta 3-4 días en nevera.)"
+};
 const RECIPES_ING={
  descanso:{
   desayuno:[{n:"avena",k:"avena",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:170},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
@@ -433,7 +473,53 @@ function scaleIng(x,sf){
   return `<b>${g}</b> ${unit} ${x.n}${extra}`;
 }
 function recipeMacros(ings,sf){let kt=0,P=0,C=0,Fz=0;ings.forEach(x=>{const g=sgram(x,sf);const f=FOOD[x.k];if(!f)return;kt+=f[0]*g/100;P+=f[1]*g/100;C+=f[2]*g/100;Fz+=f[3]*g/100;});return {kt:Math.round(kt),P:Math.round(P),C:Math.round(C),F:Math.round(Fz)};}
-function dayRecipeMacros(wd){const it=dayIntensity(wd);const sf=recipeScale(wd,it);const t={kt:0,P:0,C:0,F:0};MEALKEYS.forEach(mk=>{const m=recipeMacros(RECIPES_ING[it][mk]||[],sf);t.kt+=m.kt;t.P+=m.P;t.C+=m.C;t.F+=m.F;});return t;}
+function dayRecipeMacros(wd){const sf=recipeScale(wd,dayIntensity(wd));const t={kt:0,P:0,C:0,F:0};MEALKEYS.forEach(mk=>{const m=mealMacrosFor(wd,mk,sf);t.kt+=m.kt;t.P+=m.P;t.C+=m.C;t.F+=m.F;});return t;}
+/* ---------- PLATOS (comida/cena): biblioteca + generador ---------- */
+function dishById(id){return LIBRARY.find(d=>d.id===id);}
+function dishMacros(items){let kt=0,P=0,C=0,Fz=0;items.forEach(x=>{const f=FOOD[x.k];if(!f)return;kt+=f[0]*x.g/100;P+=f[1]*x.g/100;C+=f[2]*x.g/100;Fz+=f[3]*x.g/100;});return {kt:Math.round(kt),P:Math.round(P),C:Math.round(C),F:Math.round(Fz)};}
+function desMerMacros(wd,sf){const it=dayIntensity(wd);const t={P:0,C:0,F:0};["desayuno","media","merienda"].forEach(mk=>{const m=recipeMacros(RECIPES_ING[it][mk]||[],sf);t.P+=m.P;t.C+=m.C;t.F+=m.F;});return t;}
+function dishTarget(wd,slot){const sf=recipeScale(wd,dayIntensity(wd));const dm=dayMacrosFor(wd);const dme=desMerMacros(wd,sf);const f=slot==="comida"?0.56:0.44;return {P:(dm.P-dme.P)*f,C:(dm.C-dme.C)*f,F:(dm.F-dme.F)*f};}
+function computeDishItems(did,wd,slot){const d=dishById(did);if(!d)return [];const it=dayIntensity(wd);const tgt=dishTarget(wd,slot);
+  const fr=(it==="intenso"||it==="competicion")?{n:"plátano",k:"platano",g:120,u:120}:{n:"manzana",k:"manzana",g:150,u:150};
+  let P=0,C=0,Fz=0;const items=[];
+  function acc(k,g){const a=FOOD[k];P+=a[1]*g/100;C+=a[2]*g/100;Fz+=a[3]*g/100;}
+  function push(n,k,g,t,u){items.push({n,k,g:Math.round(g),t:t||"g",u});}
+  push("verdura","verdura",150);acc("verdura",150);
+  d.extra.forEach(([k,g])=>{const nm=(k==="huevo")?"huevo":FOODNAME[k]||k;if(k==="huevo"){push(nm,k,g,"u",50);}else push(nm,k,g);acc(k,g);});
+  push(fr.n,fr.k,fr.g,"u",fr.u);acc(fr.k,fr.g);
+  let cg=Math.max(0,(tgt.C-C)/(FOOD[d.carb][2]/100));cg=ceilTo(cg,5);push(FOODNAME[d.carb],d.carb,cg);acc(d.carb,cg);
+  if(d.prot){let pg=(tgt.P-P)/(FOOD[d.prot][1]/100);pg=Math.max(FLOORG[d.prot]||60,pg);
+    if(d.prot==="huevo"){pg=ceilTo(pg,50);push("huevo","huevo",pg,"u",50);}else{pg=ceilTo(pg,5);push(FOODNAME[d.prot],d.prot,pg);}acc(d.prot,pg);}
+  let ac=Math.max(0,tgt.F-Fz);if(ac>=3){ac=ceilTo(ac,1);push("aceite","aceite",ac);}
+  return items;}
+function mealItems(wd,mk,sf){if(mk==="comida"||mk==="cena")return computeDishItems(assignedDish(wd,mk),wd,mk);
+  return (RECIPES_ING[dayIntensity(wd)][mk]||[]).map(x=>({n:x.n,k:x.k,g:sgram(x,sf),t:x.t,u:x.u}));}
+function mealMacrosFor(wd,mk,sf){if(mk==="comida"||mk==="cena")return dishMacros(computeDishItems(assignedDish(wd,mk),wd,mk));return recipeMacros(RECIPES_ING[dayIntensity(wd)][mk]||[],sf);}
+function mealName(wd,mk){if(mk==="comida"||mk==="cena")return dishById(assignedDish(wd,mk)).name;return RECIPE_NAME[mk]||"";}
+function assignedDish(wd,mk){if(!S.weekDishes||!S.weekDishes[wd]||!S.weekDishes[wd][mk]){generateWeekDishes();save();}return (S.weekDishes&&S.weekDishes[wd]&&S.weekDishes[wd][mk])||(mk==="comida"?1:12);}
+function generateWeekDishes(){
+  const intens={};WD.forEach(wd=>intens[wd]=dayIntensity(wd));
+  const consday={mon:["FRESCO","N3","CONG"],tue:["FRESCO","N3","CONG"],wed:["N3"],thu:["CONG"],fri:["CONG"],sat:["CONG"],sun:["CONG"]};
+  const lean=["pollo","pavo","merluza","bacalao","atun"];
+  function allowed(d,wd,it){if(!d.cons.some(c=>consday[wd].includes(c)))return false;
+    if(it==="competicion"){if(!["arroz","pasta"].includes(d.carb))return false;if(!lean.includes(d.prot))return false;if(d.tags.includes("legumbre"))return false;}
+    return true;}
+  const week={};WD.forEach(wd=>week[wd]={});const used={};const pools={comida:[],cena:[]};
+  let need={pescado:3,azul:1,legumbre:2,carneroja:1,huevo:1};
+  ["comida","cena"].forEach(slot=>{const pool=pools[slot];
+    WD.forEach(wd=>{const it=intens[wd];const other=week[wd][slot==="comida"?"cena":"comida"];const prevprot=other?dishById(other).prot:null;
+      const cand=LIBRARY.filter(d=>allowed(d,wd,it));
+      const ok=d=>((used[d.id]||0)<2)&&!(prevprot&&d.prot===prevprot&&prevprot)&&!(pool.length>=4&&!pool.includes(d.id));
+      let cc=cand.filter(ok);
+      if(!cc.length)cc=cand.filter(d=>(used[d.id]||0)<2&&!(prevprot&&d.prot===prevprot&&prevprot));
+      if(!cc.length)cc=cand.filter(d=>(used[d.id]||0)<2);
+      if(!cc.length)cc=cand;
+      const scored=cc.map(d=>{let s=0;for(const q in need)if(need[q]>0&&d.tags.includes(q))s+=10;if(d.comodin)s+=2;return [d,s+Math.random()];});
+      const pick=scored.reduce((a,b)=>b[1]>a[1]?b:a)[0];
+      week[wd][slot]=pick.id;used[pick.id]=(used[pick.id]||0)+1;if(!pool.includes(pick.id))pool.push(pick.id);
+      for(const q in need)if(need[q]>0&&pick.tags.includes(q))need[q]=Math.max(0,need[q]-1);
+    });});
+  S.weekDishes=week;return week;}
 function defaultState(){
   const train=[{time:"10:00",label:"Entreno agua",type:"train"},{time:"18:00",label:"Entreno tarde",type:"train"}];
   const sched={};
@@ -789,7 +875,8 @@ function renderSchedule(){
 function savePlan(){const pw=planWeight();const g=+S.perfil.grasa,f=+S.perfil.factor;const days={};
   WD.forEach(wd=>{const it=S.intensityByDay[wd];days[wd]={intensity:it,macros:dayMacros(pw.w,g,f,it)};});
   S.weekPlan={createdAt:isoToday(),weekStart:nextMondayISO(),planWeight:pw.w,planGrasa:g,factor:f,days};
-  S.lastPlan=isoToday();save();renderPlanificar();toast("Plan de la semana guardado");}
+  generateWeekDishes();
+  S.lastPlan=isoToday();save();renderPlanificar();toast("Plan y platos de la semana guardados");}
 document.getElementById("savePlanBtn").onclick=savePlan;
 document.getElementById("sAdd").onclick=()=>{const time=document.getElementById("sTime").value,label=document.getElementById("sLabel").value.trim(),type=document.getElementById("sType").value;
   if(!label){toast("Ponle un nombre");return;}(S.schedule[selWeekday]=S.schedule[selWeekday]||[]).push({time,label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
@@ -804,7 +891,7 @@ function renderComida(){const body=document.getElementById("comidaBody");
 function renderComidaWeek(body){
   let h="";
   if(!S.weekPlan)h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan en Planificar; muestro una estimación en vivo con tus intensidades actuales.</div></div>';
-  h+='<div class="label" style="margin:2px 2px 8px">La semana · toca un día</div><div class="card flush">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div><button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button></div><div class="card flush">';
   WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayRecipeMacros(wd);
     h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
@@ -821,7 +908,7 @@ function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTy
      <div style="text-align:right"><div class="num" style="font-weight:700;color:var(--ember);font-size:20px">${dm.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div>
        <div class="r-s" style="color:var(--faint)">P ${dm.P} · C ${dm.C} · G ${dm.F} · obj ${goal.kt}</div></div></div>
    <div class="card flush">`;
-  MEALKEYS.forEach((mk,i)=>{const mm=recipeMacros(RECIPES_ING[it][mk]||[],sf);const prev=RECIPE_NAME[mk]||"";
+  MEALKEYS.forEach((mk,i)=>{const mm=mealMacrosFor(wd,mk,sf);const prev=mealName(wd,mk);
     h+=`<button class="mrow" style="width:100%;align-items:flex-start;padding:14px 16px" onclick="openRecipe('${wd}','${mk}')">
       <div style="flex:1;text-align:left">
         <div class="r-t">${MEAL_SLOTS[i]} <span class="tag meal" style="margin-left:6px">${mm.kt} kcal</span></div>
@@ -829,11 +916,24 @@ function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTy
         <div class="r-s" style="margin-top:5px;color:var(--muted)">${esc(prev)}</div></div>
       <span class="chev" style="align-self:center">›</span></button>`;});
   h+='</div>';body.innerHTML=h;}
-function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];
-  const ings=(RECIPES_ING[it]&&RECIPES_ING[it][mk])||[];const sf=recipeScale(wd,it);const mm=recipeMacros(ings,sf);
+function dishIngLine(x){
+  if(x.t==="u"){const c=Math.max(1,Math.round(x.g/x.u));const pl=UNIT_PLURAL[x.n]||[x.n,x.n];return `<b>${c}</b> ${c===1?pl[0]:pl[1]}`;}
+  if(x.k==="aceite")return `<b>${x.g}</b> g aceite <span style="color:var(--faint)">(~${Math.max(1,Math.round(x.g/10))} cda)</span>`;
+  let s=`<b>${x.g}</b> g ${x.n}`;
+  if(RAWF[x.k])s+=` <span style="color:var(--faint)">· en crudo ≈ ${ceilTo(x.g*RAWF[x.k],5)} g</span>`;
+  return s;}
+function regenDishes(){generateWeekDishes();save();toast("Platos de la semana regenerados");renderComida();}
+function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);
+  const isDish=(mk==="comida"||mk==="cena");
+  const items=mealItems(wd,mk,sf);const mm=mealMacrosFor(wd,mk,sf);
   const wkg=S.weekPlan&&S.weekPlan.planWeight?S.weekPlan.planWeight:num(S.perfil).peso;
-  const list=ings.map(x=>`<div class="row" style="padding:8px 0"><span class="zdot" style="background:${d.c}"></span><div class="grow">${scaleIng(x,sf)}</div></div>`).join("");
-  document.getElementById("pageTitle").textContent=RECIPE_NAME[mk]||MEAL_SLOTS[i];
+  const line=isDish?dishIngLine:(x=>scaleIng(x,1));
+  const list=items.map(x=>`<div class="row" style="padding:8px 0"><span class="zdot" style="background:${d.c}"></span><div class="grow">${line(x)}</div></div>`).join("");
+  const title=mealName(wd,mk);
+  document.getElementById("pageTitle").textContent=title;
+  const note=isDish
+    ? 'Cantidades a tu peso de plan, en <b>cocinado</b> (y el crudo al lado). El plato cambia cada semana al generar; macros ajustados a la intensidad del día.'
+    : 'Cantidades a tu peso de plan y <b>redondeadas hacia arriba</b>. Plátanos y nueces enteros.';
   document.getElementById("pageBody").innerHTML=`
     <span class="trendchip" style="background:${d.c}22;color:${d.c}">${d.label} · ${WDLABEL_LONG[wd]} · ${MEAL_SLOTS[i]}</span>
     <div class="macros" style="margin:14px 0">
@@ -841,15 +941,15 @@ function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk
       <div class="macro p"><div class="v num">${mm.P}</div><div class="u">prot g</div></div>
       <div class="macro"><div class="v num">${mm.C}</div><div class="u">carbo g</div></div>
       <div class="macro"><div class="v num">${mm.F}</div><div class="u">grasa g</div></div></div>
-    <div class="label" style="margin:18px 2px 6px">Ingredientes · ajustado a ${fmt(wkg)} kg</div>
+    <div class="label" style="margin:18px 2px 6px">Ingredientes · ${fmt(wkg)} kg</div>
     <div class="card flush" style="padding:4px 16px">${list}</div>
-    <button class="btn teal" style="margin-top:14px;width:100%" onclick="toggleSteps('${it}','${mk}')">Abrir receta</button>
+    <button class="btn teal" style="margin-top:14px;width:100%" onclick="openStepsBox('${wd}','${mk}')">Abrir receta</button>
     <div id="stepsBox" style="display:none;margin-top:14px"></div>
-    <div class="note" style="margin-top:12px">Cantidades calculadas a tu peso de plan y <b>redondeadas hacia arriba</b> para que no te quedes con hambre. Plátanos y nueces van enteros. La forma de prepararlo es la misma en todas las intensidades.</div>`;
+    <div class="note" style="margin-top:12px">${note}</div>`;
   pageReturn=renderComida;document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-function toggleSteps(it,mk){const box=document.getElementById("stepsBox");
+function openStepsBox(wd,mk){const box=document.getElementById("stepsBox");
   if(box.style.display!=="none"){box.style.display="none";return;}
-  const pasos=STEP_BY_MEAL[mk]||"";
+  const pasos=(mk==="comida"||mk==="cena")?(DISH_STEPS[assignedDish(wd,mk)]||""):(STEP_BY_MEAL[mk]||"");
   box.innerHTML='<div class="label" style="margin-bottom:8px">Paso a paso</div><div class="card" id="stepsCard"></div>';
   const card=document.getElementById("stepsCard");card.style.whiteSpace="pre-wrap";card.style.lineHeight="1.6";card.textContent=pasos;
   box.style.display="block";box.scrollIntoView({behavior:"smooth",block:"nearest"});}
