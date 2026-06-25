@@ -200,6 +200,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
         <input type="file" id="fImport" accept="application/json" hidden>
       </div>
     </div>
+    <div class="note" id="verLine" style="text-align:center;padding:10px 0 4px;color:var(--faint)"></div>
   </section>
 
   <!-- HOY -->
@@ -299,6 +300,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
+const APP_VERSION="0.4";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -351,7 +353,25 @@ function defaultState(){
 }
 function id(){return Math.random().toString(36).slice(2,9);}
 let S=store.get()||defaultState();
+function migrate(s){
+  const d=defaultState();
+  s.perfil=Object.assign({},d.perfil,s.perfil||{});
+  if(!s.intensityByDay)s.intensityByDay=d.intensityByDay;
+  if(!("weekPlan" in s))s.weekPlan=null;
+  if(!s.schedule)s.schedule=d.schedule;
+  if(!s.meals)s.meals={};
+  if(!Array.isArray(s.metrics))s.metrics=d.metrics;
+  if(!Array.isArray(s.tasks))s.tasks=d.tasks;
+  delete s.dayType; delete s.todayType;
+  const valid=new Set(INTENS);
+  WD.forEach(wd=>{if(!s.intensityByDay[wd]||!valid.has(s.intensityByDay[wd]))s.intensityByDay[wd]=d.intensityByDay[wd];});
+  // si tenía un weekPlan con intensidades viejas (doble, simple_int...), se descarta para recalcular
+  if(s.weekPlan&&s.weekPlan.days){const ok=WD.every(wd=>s.weekPlan.days[wd]&&valid.has(s.weekPlan.days[wd].intensity));if(!ok)s.weekPlan=null;}
+  return s;
+}
+S=migrate(S);
 function save(){store.set(S);}
+save();
 
 /* ---------- utilidades ---------- */
 function fmt(n,d=1){if(n==null||isNaN(n))return "—";return (+n).toFixed(d).replace(".",",");}
@@ -721,6 +741,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkWeigh
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 nav("perfil");checkWeigh();
+document.getElementById("verLine").textContent="app v"+APP_VERSION+" · "+("serviceWorker" in navigator?"instalable":"navegador");
 if(new Date().getDay()===0&&planDueNow()){nav("planificar");toast("Es domingo: planifica tu semana");}
 </script>
 </body>
