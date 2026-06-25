@@ -210,12 +210,26 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
       <div class="next-when" id="nextWhen">Sin nada programado hoy</div>
       <div class="count" id="nextCount" style="display:none"></div>
     </div>
-    <div class="card"><div class="label">Tipo de día</div><div class="pills" id="dayPills"></div><div class="macros" id="hoyMacros"></div></div>
+    <div class="card"><div class="label">Intensidad de hoy</div><div id="hoyIntensity"></div>
+      <div class="macros" id="hoyMacros" style="margin-top:12px"></div>
+      <div class="note" id="hoyPlanNote" style="margin-top:10px"></div></div>
     <div class="card"><div class="label">El día, de un vistazo</div><div class="tl" id="hoyTimeline"></div></div>
   </section>
 
-  <!-- HORARIOS -->
-  <section class="view" id="v-horarios">
+  <!-- PLANIFICAR -->
+  <section class="view" id="v-planificar">
+    <div class="card" id="planDue" style="display:none"></div>
+    <div class="card">
+      <div class="label">Intensidad de la semana</div>
+      <div id="intensSummary" class="affect" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px"></div>
+      <div id="intensDays"></div>
+      <div class="divider"></div>
+      <div class="row" style="border-top:none;padding:4px 0"><div class="grow"><div class="r-t">Peso de planificación</div><div class="r-s" id="planWeightNote"></div></div><div class="num" id="planWeightVal" style="font-weight:700;font-size:19px"></div></div>
+      <button class="btn primary" id="savePlanBtn" style="margin-top:10px">Calcular y guardar plan</button>
+    </div>
+    <div class="section-h"><h2>Macros de la semana</h2></div>
+    <div class="card flush" id="weekTable"></div>
+    <div class="section-h"><h2>Horario por día</h2></div>
     <div class="card"><div class="label">Día de la semana</div><div class="pills" id="wdPills"></div></div>
     <div class="card flush" id="schedList"></div>
     <div class="card">
@@ -254,7 +268,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <nav id="nav">
   <button class="tab on" data-v="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span>Perfil</span></button>
   <button class="tab" data-v="hoy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Hoy</span></button>
-  <button class="tab" data-v="horarios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><span>Horarios</span></button>
+  <button class="tab" data-v="planificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4M8 13h2M8 17h2M14 13h2"/></svg><span>Planificar</span></button>
   <button class="tab" data-v="comida"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v8M9 3v8M7 11v10M17 3c-2 0-3 2-3 5s1 4 3 4m0-9v18"/></svg><span>Comida</span></button>
   <button class="tab" data-v="avisos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.5 21a1.5 1.5 0 0 0 3 0"/></svg><span>Avisos</span></button>
 </nav>
@@ -290,9 +304,14 @@ const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):
 
 /* ---------- motor (idéntico a la hoja) ---------- */
 const ENGINE={factorBase:1.45,protGkg:2.0,kcalP:4,kcalC:4,kcalF:9,
- dayTypes:{descanso:{label:"Descanso",min:0,kpm:0,carbGkg:3.5},simple_suave:{label:"Simple suave",min:60,kpm:9,carbGkg:5.0},
- simple_int:{label:"Simple intensa",min:90,kpm:12,carbGkg:7.0},doble:{label:"Doble sesión",min:180,kpm:11,carbGkg:8.5},
- competicion:{label:"Competición",min:120,kpm:12,carbGkg:9.0}}};
+ dayTypes:{
+  descanso:{label:"Descanso",min:0,kpm:0,carbGkg:3.5,c:"#7FA0A8"},
+  suave:{label:"Suave",min:70,kpm:9,carbGkg:5.0,c:"#35D0BE"},
+  moderado:{label:"Moderado",min:120,kpm:10,carbGkg:6.5,c:"#7FD08A"},
+  intenso:{label:"Intenso",min:180,kpm:11,carbGkg:8.5,c:"#E8A03D"},
+  competicion:{label:"Competición / Test",min:120,kpm:12,carbGkg:9.0,c:"#E5685F"}
+ }};
+const INTENS=["descanso","suave","moderado","intenso","competicion"];
 const lean=(p,g)=>p*(1-g/100), tmbKatch=m=>370+21.6*m, getBase=(p,g,f)=>tmbKatch(lean(p,g))*f;
 function dayMacros(p,g,f,key){const d=ENGINE.dayTypes[key],ke=d.min*d.kpm,kt=getBase(p,g,f)+ke;
   const P=ENGINE.protGkg*p,C=d.carbGkg*p,F=(kt-P*ENGINE.kcalP-C*ENGINE.kcalC)/ENGINE.kcalF;
@@ -319,15 +338,16 @@ const MEAL_SLOTS=["Desayuno","Media mañana","Comida","Merienda / Pre","Cena"];
 const MEAL_SPLIT=[0.22,0.13,0.28,0.15,0.22];
 function defaultState(){
   const train=[{time:"10:00",label:"Entreno agua",type:"train"},{time:"18:00",label:"Entreno tarde",type:"train"}];
-  const sched={},dt={};
-  WD.forEach(d=>{if(d==="sun"){sched[d]=[{time:"11:00",label:"Batch cooking",type:"other"}];dt[d]="descanso";}
-    else{sched[d]=JSON.parse(JSON.stringify(train));dt[d]="doble";}});
+  const sched={};
+  WD.forEach(d=>{if(d==="sun"){sched[d]=[{time:"11:00",label:"Batch cooking · cocinar semana",type:"other"}];}
+    else{sched[d]=JSON.parse(JSON.stringify(train));}});
+  const intensityByDay={mon:"intenso",tue:"moderado",wed:"intenso",thu:"moderado",fri:"suave",sat:"intenso",sun:"descanso"};
   return {perfil:{nombre:"Manuel Gironés Benavente",sexo:"Hombre",nacimiento:"2008-04-15",
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
-    schedule:sched,dayType:dt,meals:{},
+    schedule:sched,intensityByDay,weekPlan:null,meals:{},
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"07:30",label:"Pesarme en ayunas"}],
-    todayType:null,lastWeigh:null};
+    lastWeigh:null,lastPlan:null};
 }
 function id(){return Math.random().toString(36).slice(2,9);}
 let S=store.get()||defaultState();
@@ -570,14 +590,20 @@ document.getElementById("weighSave").onclick=()=>{
 document.getElementById("weighLater").onclick=()=>document.getElementById("weighScrim").classList.remove("show");
 
 /* ---------- HOY ---------- */
-function curType(){return S.todayType||S.dayType[todayKey()]||"doble";}
-function renderHoy(){
-  const pc=document.getElementById("dayPills");pc.innerHTML="";
-  Object.entries(ENGINE.dayTypes).forEach(([k,d])=>{const b=document.createElement("button");b.className="pill"+(k===curType()?" on":"");
-    b.textContent=d.label;b.onclick=()=>{S.todayType=k;save();renderHoy();};pc.appendChild(b);});
-  renderMacroRow("hoyMacros",curType());
+function curType(){const wd=todayKey();return (S.weekPlan&&S.weekPlan.days[wd]&&S.weekPlan.days[wd].intensity)||(S.intensityByDay&&S.intensityByDay[wd])||"moderado";}
+function todaysPlan(){const wd=todayKey();let it,macros;
+  if(S.weekPlan&&S.weekPlan.days[wd]){it=S.weekPlan.days[wd].intensity;macros=S.weekPlan.days[wd].macros;}
+  else{it=(S.intensityByDay&&S.intensityByDay[wd])||"moderado";const n=num(S.perfil);macros=dayMacros(n.peso,n.grasa,n.factor,it);}
+  const d=ENGINE.dayTypes[it]||ENGINE.dayTypes.moderado;return {intensity:it,label:d.label,color:d.c,macros};}
+function renderMacroRowVals(elId,m){document.getElementById(elId).innerHTML=`<div class="macro kc"><div class="v num">${m.kt}</div><div class="u">kcal</div></div><div class="macro p"><div class="v num">${m.P}</div><div class="u">prot g</div></div><div class="macro"><div class="v num">${m.C}</div><div class="u">carbo g</div></div><div class="macro"><div class="v num">${m.F}</div><div class="u">grasa g</div></div>`;}
+
+/* ---------- HOY ---------- */
+function renderHoy(){const tp=todaysPlan();
+  document.getElementById("hoyIntensity").innerHTML=`<span class="trendchip" style="background:${tp.color}22;color:${tp.color}">${tp.label}</span>`;
+  renderMacroRowVals("hoyMacros",tp.macros);
+  document.getElementById("hoyPlanNote").innerHTML=S.weekPlan?`Macros fijados en el plan del ${fmtD(S.weekPlan.createdAt)} · peso ${fmt(S.weekPlan.planWeight)} kg.`:`Sin plan semanal: cálculo en vivo. Fíjalo en <b>Planificar</b>.`;
   const tl=document.getElementById("hoyTimeline");tl.innerHTML="";
-  const items=daySchedule(todayKey());if(!items.length)tl.innerHTML='<div class="empty">Sin bloques hoy. Añádelos en Horarios.</div>';
+  const items=daySchedule(todayKey());if(!items.length)tl.innerHTML='<div class="empty">Sin bloques hoy. Añádelos en Planificar.</div>';
   const nowM=new Date().getHours()*60+new Date().getMinutes();let nextItem=null;
   items.forEach(it=>{const m=toMin(it.time);if(m>=nowM&&!nextItem)nextItem=it;
     const el=document.createElement("div");el.className="tl-item "+it.type+(Math.abs(m-nowM)<30&&m<=nowM?" now":"");
@@ -588,33 +614,69 @@ function renderHoy(){
   else if(items.length){nt.textContent="Día completado";nw.textContent="No queda nada por delante";nc.style.display="none";}
   else{nt.textContent="—";nw.textContent="Sin nada programado hoy";nc.style.display="none";}
 }
-function renderMacroRow(elId,key){const n=num(S.perfil);const m=dayMacros(n.peso,n.grasa,n.factor,key);
-  document.getElementById(elId).innerHTML=`<div class="macro kc"><div class="v num">${m.kt}</div><div class="u">kcal</div></div>
-   <div class="macro p"><div class="v num">${m.P}</div><div class="u">prot g</div></div>
-   <div class="macro"><div class="v num">${m.C}</div><div class="u">carbo g</div></div>
-   <div class="macro"><div class="v num">${m.F}</div><div class="u">grasa g</div></div>`;}
 
-/* ---------- HORARIOS ---------- */
+/* ---------- PLANIFICAR ---------- */
 let selWeekday=todayKey();
 function daySchedule(wd){return (S.schedule[wd]||[]).slice().sort((a,b)=>toMin(a.time)-toMin(b.time));}
-function renderHorarios(){
+function fmtD(iso){const a=iso.split("-");return a[2]+"/"+a[1];}
+function nextMondayISO(){const d=new Date();const day=(d.getDay()+6)%7;d.setDate(d.getDate()+(7-day));return d.toISOString().slice(0,10);}
+function planWeight(){const lim=new Date(Date.now()-7*86400000);
+  const recent=S.metrics.filter(m=>m.peso!=null&&new Date(m.date)>=lim);
+  if(recent.length){return {w:recent.reduce((a,b)=>a+b.peso,0)/recent.length,basis:`media 7 días (${recent.length} pesaje${recent.length>1?"s":""})`};}
+  return {w:+S.perfil.peso,basis:"peso actual (sin pesajes recientes)"};}
+function planDueNow(){if(!S.weekPlan)return true;if(new Date().getDay()===0&&S.lastPlan!==isoToday())return true;return false;}
+const STORE={mon:"Nevera",tue:"Nevera",wed:"Nevera",thu:"Congelar",fri:"Congelar",sat:"Congelar",sun:"Congelar"};
+function renderPlanificar(){
+  const due=document.getElementById("planDue");
+  if(planDueNow()){due.style.display="block";
+    due.innerHTML=`<div class="r-t" style="color:var(--ember)">${new Date().getDay()===0?"Es domingo: planifica tu semana":"Planifica tu semana"}</div>
+      <div class="note" style="margin-top:4px">Asigna la intensidad de cada día y pulsa “Calcular y guardar plan”. Cocinas el domingo, así que los macros se fijan con tu peso de esta semana.</div>`;
+  } else due.style.display="none";
+  const counts={};INTENS.forEach(k=>counts[k]=0);WD.forEach(wd=>counts[S.intensityByDay[wd]]++);
+  document.getElementById("intensSummary").innerHTML=INTENS.map(k=>{const d=ENGINE.dayTypes[k];
+    return `<div class="a"><div class="v" style="color:${d.c}">${counts[k]}</div><div class="u">${d.label.split(" ")[0]}</div></div>`;}).join("");
+  const opts=k=>INTENS.map(i=>`<option value="${i}" ${i===k?"selected":""}>${ENGINE.dayTypes[i].label}</option>`).join("");
+  document.getElementById("intensDays").innerHTML=WD.map(wd=>{const k=S.intensityByDay[wd];const c=ENGINE.dayTypes[k].c;
+    return `<div class="row" style="padding:9px 0"><span class="zdot" style="background:${c}"></span>
+      <div class="r-t" style="flex:0 0 40px">${WDLABEL[wd]}</div>
+      <select class="input intensel" data-wd="${wd}" style="flex:1">${opts(k)}</select></div>`;}).join("");
+  document.querySelectorAll(".intensel").forEach(sel=>sel.onchange=()=>{S.intensityByDay[sel.dataset.wd]=sel.value;save();renderPlanificar();});
+  const pw=planWeight();document.getElementById("planWeightVal").textContent=fmt(pw.w)+" kg";
+  document.getElementById("planWeightNote").textContent=pw.basis;
+  const wt=document.getElementById("weekTable");
+  if(S.weekPlan){wt.innerHTML=WD.map(wd=>{const dp=S.weekPlan.days[wd];const d=ENGINE.dayTypes[dp.intensity];const m=dp.macros;
+      return `<div class="row" style="padding:12px 16px;align-items:flex-start">
+        <div class="r-t" style="flex:0 0 38px">${WDLABEL[wd]}</div>
+        <div style="flex:1"><div><span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
+          <span class="tag" style="margin-left:4px">${STORE[wd]}</span></div>
+          <div class="r-s" style="margin-top:4px">P ${m.P} · C ${m.C} · G ${m.F} g</div></div>
+        <div class="num" style="font-weight:700;color:var(--ember)">${m.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div></div>`;}).join("");
+  } else wt.innerHTML='<div class="empty" style="padding:22px">Aún sin plan. Pulsa “Calcular y guardar plan” arriba.</div>';
+  renderSchedule();
+}
+function renderSchedule(){
   const wp=document.getElementById("wdPills");wp.innerHTML="";
-  WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;renderHorarios();};wp.appendChild(b);});
+  WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;renderSchedule();};wp.appendChild(b);});
   const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday);
   if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. Añade un bloque abajo.</div>';
   items.forEach(it=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 16px";
     r.innerHTML=`<div class="tl-time num" style="flex:0 0 48px">${it.time}</div><div class="grow"><div class="r-t">${esc(it.label)}</div></div><span class="tag ${it.type}">${typeLabel(it.type)}</span><button class="btn-del">×</button>`;
-    r.querySelector(".btn-del").onclick=()=>{S.schedule[selWeekday]=S.schedule[selWeekday].filter(x=>x!==it);save();renderHorarios();};list.appendChild(r);});
+    r.querySelector(".btn-del").onclick=()=>{S.schedule[selWeekday]=S.schedule[selWeekday].filter(x=>x!==it);save();renderSchedule();};list.appendChild(r);});
 }
+function savePlan(){const pw=planWeight();const g=+S.perfil.grasa,f=+S.perfil.factor;const days={};
+  WD.forEach(wd=>{const it=S.intensityByDay[wd];days[wd]={intensity:it,macros:dayMacros(pw.w,g,f,it)};});
+  S.weekPlan={createdAt:isoToday(),weekStart:nextMondayISO(),planWeight:pw.w,planGrasa:g,factor:f,days};
+  S.lastPlan=isoToday();save();renderPlanificar();toast("Plan de la semana guardado");}
+document.getElementById("savePlanBtn").onclick=savePlan;
 document.getElementById("sAdd").onclick=()=>{const time=document.getElementById("sTime").value,label=document.getElementById("sLabel").value.trim(),type=document.getElementById("sType").value;
-  if(!label){toast("Ponle un nombre");return;}(S.schedule[selWeekday]=S.schedule[selWeekday]||[]).push({time,label,type});save();document.getElementById("sLabel").value="";renderHorarios();toast("Bloque añadido");};
+  if(!label){toast("Ponle un nombre");return;}(S.schedule[selWeekday]=S.schedule[selWeekday]||[]).push({time,label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
 
 /* ---------- COMIDA ---------- */
-function renderComida(){const key=curType();document.getElementById("nutDayLabel").textContent=ENGINE.dayTypes[key].label;
-  renderMacroRow("nutMacros",key);const n=num(S.perfil);const m=dayMacros(n.peso,n.grasa,n.factor,key);const dk=isoToday();
+function renderComida(){const tp=todaysPlan();document.getElementById("nutDayLabel").textContent=tp.label;
+  renderMacroRowVals("nutMacros",tp.macros);const dk=isoToday();
   S.meals[dk]=S.meals[dk]||MEAL_SLOTS.map(s=>({slot:s,text:""}));
   const cont=document.getElementById("mealSlots");cont.innerHTML="";
-  S.meals[dk].forEach((ml,i)=>{const kc=Math.round(m.kt*MEAL_SPLIT[i]);const r=document.createElement("div");r.className="row";r.style.padding="14px 16px";r.style.alignItems="flex-start";
+  S.meals[dk].forEach((ml,i)=>{const kc=Math.round(tp.macros.kt*MEAL_SPLIT[i]);const r=document.createElement("div");r.className="row";r.style.padding="14px 16px";r.style.alignItems="flex-start";
     r.innerHTML=`<div style="flex:1"><div class="r-t">${ml.slot} <span class="tag meal" style="margin-left:6px">${kc} kcal</span></div><input class="input" placeholder="por definir" value="${esc(ml.text)}" style="margin-top:8px"></div>`;
     const inp=r.querySelector("input");inp.onchange=()=>{S.meals[dk][i].text=inp.value;save();};cont.appendChild(r);});}
 
@@ -639,17 +701,18 @@ document.getElementById("bIcs").onclick=()=>{let v=["BEGIN:VCALENDAR","VERSION:2
   S.tasks.forEach(t=>WD.forEach(wd=>add(nextDateFor(wd,t.time),t.label,RRULE[wd])));
   // pesaje diario 21:00 todos los días
   add(nextDateFor(todayKey(),"21:00"),"Pésate y registra tu peso","MO,TU,WE,TH,FR,SA,SU");
+  add(nextDateFor("sun","19:00"),"Planifica la semana y cocina (batch)","SU");
   v.push("END:VCALENDAR");dl(new Blob([v.join("\r\n")],{type:"text/calendar"}),"mi-plan.ics");toast("Calendario generado");};
 
 /* ---------- navegación + reloj ---------- */
-const TITLES={perfil:"Perfil",hoy:"Hoy",horarios:"Horarios",comida:"Nutrición",avisos:"Avisos"};
+const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos"};
 function nav(v){document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
   document.getElementById("v-"+v).classList.add("active");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
   document.getElementById("hEyebrow").textContent=v==="perfil"?"Mi plan":TITLES[v];
   document.getElementById("hTitle").textContent=TITLES[v];
   document.getElementById("hDate").textContent=v==="hoy"?dateStr():"";
-  ({perfil:renderPerfil,hoy:renderHoy,horarios:renderHorarios,comida:renderComida,avisos:renderAvisos}[v])();window.scrollTo(0,0);}
+  ({perfil:renderPerfil,hoy:renderHoy,planificar:renderPlanificar,comida:renderComida,avisos:renderAvisos}[v])();window.scrollTo(0,0);}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>nav(t.dataset.v));
 function tick(){const d=new Date();document.getElementById("pClock").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   document.getElementById("pDate").textContent=dateStr();}
@@ -658,6 +721,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkWeigh
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 nav("perfil");checkWeigh();
+if(new Date().getDay()===0&&planDueNow()){nav("planificar");toast("Es domingo: planifica tu semana");}
 </script>
 </body>
 </html>
