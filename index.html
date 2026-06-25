@@ -296,7 +296,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="0.5";
+const APP_VERSION="0.6";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -373,6 +373,14 @@ const RECIPES_DEFAULT={
   cena:"Merluza al horno + patata (magro) · 130 g merluza · 730 g patata cocida · 150 g verdura · 1 cda aceite · 1 plátano."
  }
 };
+const STEP_BY_MEAL={
+ desayuno:"LA NOCHE DE ANTES:\n1) Coge un bote o táper con tapa.\n2) Echa dentro la avena, la leche y el yogur griego. Si la receta lleva miel, échala también. En competición añade también el whey.\n3) Remueve bien con una cuchara hasta que esté todo mezclado.\n4) Tapa y mételo en la nevera toda la noche (mínimo 4 horas). NO se cocina nada: la avena se ablanda sola.\n\nPOR LA MAÑANA:\n5) Saca el bote. Pela el plátano y córtalo en rodajas por encima.\n6) Si lleva manzana, córtala en daditos y échala. Parte las nueces con la mano y espárcelas.\n7) Listo para comer, frío. (Si lo quieres caliente: caliéntalo 1,5–2 min en el microondas ANTES de poner la fruta.)",
+ media:"EN EL MOMENTO (o lo dejas hecho y a la nevera):\n1) Coge un táper o un bol.\n2) Echa el skyr.\n3) Pela el plátano y córtalo en rodajas encima. Si lleva manzana, córtala en daditos y añádela.\n4) Echa la miel por encima (si la lleva) y las nueces partidas con la mano.\n5) Si la receta lleva avena cruda, espárcela por encima al final (da un toque crujiente).\n6) Tapa y guárdalo en la nevera hasta que te lo comas. No hay que cocinar nada.",
+ comida:"EN EL MOMENTO (de momento; el domingo en lote lo veremos aparte):\n1) Enciende el horno a 200°C.\n2) Pon el pollo en una bandeja. Échale una pizca de sal y la mitad del aceite. Pon la verdura cortada (calabacín, pimiento, lo que tengas) alrededor.\n3) Hornea 20–25 min. Comprueba cortando el pollo: tiene que estar blanco por dentro, nada rosa.\n4) Mientras, cuece el arroz: agua con sal a hervir, echa el arroz y cuécelo los minutos que diga el paquete (12–15 min). Escúrrelo.\n5) Sirve pollo + arroz + verdura. Echa el resto del aceite por encima.\n6) De postre, la fruta.",
+ merienda:"EN EL MOMENTO (o lo dejas hecho de antes):\n1) Coge la batidora de vaso (o un vaso alto con batidora de mano).\n2) Echa dentro: la leche, la avena, el skyr (o el whey si lo lleva), la miel (si la lleva) y el plátano pelado y troceado.\n3) Tritura 30–60 segundos hasta que quede espeso y sin grumos.\n4) Pásalo a una botella o táper.\n5) Tómalo antes del entreno de las 18:00. Si lo quieres más llenador, ponle un poco menos de leche. Si lo dejaste hecho, remueve antes.",
+ cena:"EN EL MOMENTO (de momento; el domingo en lote lo veremos aparte):\n1) Enciende el horno a 200°C.\n2) Lava las patatas y córtalas en rodajas no muy gruesas (con piel vale). Ponlas en una bandeja con una pizca de sal y la mitad del aceite. Hornéalas 15 min para que ablanden.\n3) Saca la bandeja, pon la merluza encima de las patatas con sal y la verdura al lado. Vuelve a hornear 12–15 min, hasta que el pescado se separe en lascas con el tenedor.\n4) Sirve, echa el resto del aceite y de postre la fruta.\n\nALTERNATIVA MÁS RÁPIDA: cuece las patatas peladas y troceadas en agua hirviendo con sal 15–18 min, y haz la merluza a la plancha 3–4 min por cada lado."
+};
+function buildSteps(){const o={};INTENS.forEach(it=>{o[it]={};MEALKEYS.forEach(mk=>{o[it][mk]=STEP_BY_MEAL[mk];});});return o;}
 function defaultState(){
   const train=[{time:"10:00",label:"Entreno agua",type:"train"},{time:"18:00",label:"Entreno tarde",type:"train"}];
   const sched={};
@@ -383,6 +391,7 @@ function defaultState(){
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
     schedule:sched,intensityByDay,weekPlan:null,meals:{},
     recipes:JSON.parse(JSON.stringify(RECIPES_DEFAULT)),
+    steps:buildSteps(),
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"07:30",label:"Pesarme en ayunas"}],
     lastWeigh:null,lastPlan:null};
@@ -398,6 +407,8 @@ function migrate(s){
   if(!s.meals)s.meals={};
   if(!s.recipes)s.recipes=JSON.parse(JSON.stringify(RECIPES_DEFAULT));
   INTENS.forEach(it=>{s.recipes[it]=Object.assign({},RECIPES_DEFAULT[it],s.recipes[it]||{});});
+  if(!s.steps)s.steps=buildSteps();
+  INTENS.forEach(it=>{if(!s.steps[it])s.steps[it]={};MEALKEYS.forEach(mk=>{if(!s.steps[it][mk])s.steps[it][mk]=STEP_BY_MEAL[mk];});});
   if(!Array.isArray(s.metrics))s.metrics=d.metrics;
   if(!Array.isArray(s.tasks))s.tasks=d.tasks;
   delete s.dayType; delete s.todayType;
@@ -775,13 +786,25 @@ function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk
       <div class="macro p"><div class="v num">${mm.P}</div><div class="u">prot g</div></div>
       <div class="macro"><div class="v num">${mm.C}</div><div class="u">carbo g</div></div>
       <div class="macro"><div class="v num">${mm.F}</div><div class="u">grasa g</div></div></div>
-    <div class="field"><label>Receta · qué comer</label>
-      <textarea class="input" id="recText" rows="8" style="resize:vertical;line-height:1.5">${esc(rec)}</textarea></div>
-    <button class="btn primary" onclick="saveRecipe('${it}','${mk}')">Guardar receta</button>
-    <div class="note" style="margin-top:10px">Vale para <b>todos los días ${d.label}</b> (la escribes una vez). Cantidades a tu peso de plan; si cambias mucho de peso, revísala.</div>`;
+    <div class="field"><label>Ingredientes</label>
+      <textarea class="input" id="recText" rows="6" style="resize:vertical;line-height:1.5">${esc(rec)}</textarea></div>
+    <div class="add-line" style="margin-top:0">
+      <button class="btn primary" style="flex:1" onclick="saveRecipe('${it}','${mk}')">Guardar ingredientes</button>
+      <button class="btn teal" style="flex:1" onclick="toggleSteps('${it}','${mk}')">Abrir receta</button>
+    </div>
+    <div id="stepsBox" style="display:none;margin-top:14px"></div>
+    <div class="note" style="margin-top:12px">Los ingredientes valen para <b>todos los días ${d.label}</b> (se escriben una vez). Cantidades a tu peso de plan; si cambias mucho de peso, revísalas.</div>`;
   pageReturn=renderComida;document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function toggleSteps(it,mk){const box=document.getElementById("stepsBox");
+  if(box.style.display!=="none"){box.style.display="none";return;}
+  const pasos=(S.steps[it]&&S.steps[it][mk])||"";
+  box.innerHTML='<div class="label" style="margin-bottom:8px">Paso a paso</div><div class="card" id="stepsCard"></div>';
+  document.getElementById("stepsCard").style.whiteSpace="pre-wrap";
+  document.getElementById("stepsCard").style.lineHeight="1.6";
+  document.getElementById("stepsCard").textContent=pasos;
+  box.style.display="block";box.scrollIntoView({behavior:"smooth",block:"nearest"});}
 function saveRecipe(it,mk){const v=document.getElementById("recText").value;
-  if(!S.recipes[it])S.recipes[it]={};S.recipes[it][mk]=v;save();closePage();toast("Receta guardada");}
+  if(!S.recipes[it])S.recipes[it]={};S.recipes[it][mk]=v;save();closePage();toast("Ingredientes guardados");}
 
 /* ---------- AVISOS ---------- */
 function renderAvisos(){const tl=document.getElementById("taskList");tl.innerHTML="";if(!S.tasks.length)tl.innerHTML='<div class="empty">Sin recordatorios todavía.</div>';
