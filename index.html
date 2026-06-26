@@ -194,6 +194,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     <div class="card flush" id="physRows"></div>
     <div class="section-h"><h2>Mejores marcas · ergómetro</h2></div>
     <div class="card flush" id="bestMarks"></div>
+    <button class="btn sm" style="width:100%;margin-top:10px" onclick="openStats()">Resumen de entrenamientos</button>
     <div class="section-h"><h2>Configuración</h2></div>
     <div class="card">
       <div class="label">Edición de planificación</div>
@@ -319,7 +320,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.3";
+const APP_VERSION="1.4";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -554,7 +555,7 @@ function defaultState(){
     steps:buildSteps(),
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"08:00",label:"Pesarme en ayunas"}],
-    trainings:[],bestMarks:{"500":null,"1000":null,"2000":{time:"6:19",secs:379,date:"2026-03-19"},"6000":null},trainDone:{},
+    trainings:[],bestMarks:{"500":null,"1000":null,"2000":{time:"6:19",secs:379,date:"2026-03-19"},"6000":null},trainDone:{},trainSnooze:{},
     weighSnooze:null,lastWeigh:null,lastPlan:null};
 }
 function id(){return Math.random().toString(36).slice(2,9);}
@@ -570,6 +571,7 @@ function migrate(s){
   if(!Array.isArray(s.trainings))s.trainings=[];
   if(!s.bestMarks)s.bestMarks=JSON.parse(JSON.stringify(d.bestMarks));else ["500","1000","2000","6000"].forEach(k=>{if(!(k in s.bestMarks))s.bestMarks[k]=null;});
   if(!s.trainDone)s.trainDone={};
+  if(!s.trainSnooze)s.trainSnooze={};
   if(!("scheduleTemplate" in s))s.scheduleTemplate=null;
   if(!s.v11clean){WD.forEach(wd=>{if(Array.isArray(s.schedule[wd]))s.schedule[wd]=s.schedule[wd].filter(b=>b.label!=="Entreno agua"&&b.label!=="Entreno tarde");});s.v11clean=true;}
   WD.forEach(wd=>{(s.schedule[wd]||[]).forEach(b=>{if(!b.start&&b.time)b.start=b.time;if(!("end" in b))b.end="";delete b.time;});});
@@ -791,7 +793,7 @@ function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title
   document.getElementById("pageBody").innerHTML=body;
   document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 let pageReturn=renderPerfil;
-function closePage(){document.getElementById("page").classList.remove("show");if(pageReturn)pageReturn();}
+function closePage(){document.getElementById("page").classList.remove("show");document.getElementById("pageBack").style.display="flex";if(pageReturn)pageReturn();}
 function val(id){return document.getElementById(id).value;}
 let curView="perfil";
 /* ===== BLOQUEO · DOMINGO · DEV ===== */
@@ -870,9 +872,11 @@ function _sel(label,key,opts,struct){const o=opts.map(([v,t])=>`<option value="$
 function _num(label,key,ph){return _fld(label,`<input class="input num" type="number" inputmode="decimal" placeholder="${ph||""}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
 function _time(label,key,ph){return _fld(label,`<input class="input num" type="text" inputmode="numeric" placeholder="${ph||"mm:ss"}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
 const _blkOpts=[...Array(8)].map((_,i)=>[String(i+1),String(i+1)]);
-function openTrainForm(opts){tf={type:""};tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;
-  pageReturn=(curView==="hoy"?renderHoy:renderPerfil);document.getElementById("pageTitle").textContent="Registrar entreno";renderTrainForm();
-  document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+let tfBlocking=false;
+function openTrainForm(opts){tf={type:""};tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;tfBlocking=!!(opts&&opts.blocking);
+  pageReturn=(curView==="hoy"?renderHoy:renderPerfil);document.getElementById("pageTitle").textContent="Registrar entreno";
+  document.getElementById("pageBack").style.display=tfBlocking?"none":"flex";
+  renderTrainForm();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function renderTrainForm(){
   let h=_sel("Tipo de entreno","type",[["agua","Agua"],["erg","Ergómetro"],["pesas","Pesas"],["bici","Bici"],["correr","Correr"]],true);
   const t=tf.type;
@@ -889,35 +893,43 @@ function renderTrainForm(){
   } else if(t==="pesas"){
     h+=_sel("Tipo","pesasTipo",[["potencia","Potencia"],["resistencia","Resistencia"]],false);
     h+=_sel("Fatiga de la sesión (1-10)","fatiga",[...Array(10)].map((_,i)=>[String(i+1),String(i+1)]),false);
-  } else if(t==="erg"){
-    h+=_num("Distancia total (m)","distTotal","m")+_time("Tiempo total","timeTotal","mm:ss");
-    h+=_sel("Tipo de sesión","ergTipo",[["rodaje","Rodaje"],["series","Series"],["test","Test"]],true);
-    if(tf.ergTipo==="test"){
-      h+=_sel("Distancia del test","testDist",[["500","500 m"],["1000","1000 m"],["2000","2000 m"],["6000","6000 m"]],false)+_time("Tiempo del test","testTime","mm:ss");
-    } else if(tf.ergTipo==="series"){
-      h+=_sel("Tipo de series","ergSerieTipo",[["tiempo","Series de tiempo"],["distancia","Series de distancia"],["piramides","Pirámides"],["intervalos","Intervalos"]],true);
-      const st=tf.ergSerieTipo;
-      if(st==="tiempo"||st==="distancia"){
-        h+=(st==="tiempo"?_time("Tiempo de cada serie","tSerie","mm:ss"):_num("Distancia de cada serie (m)","dSerie","m"));
-        h+=_time("Descanso entre series","tDesc","mm:ss")+_num("Nº de series","nSeries","");
-        h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
-        if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
-        h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
-      } else if(st==="intervalos"){
-        h+=_num("Paladas fuertes","palFuertes","")+_num("Paladas suaves","palSuaves","")+_num("Nº de series","nSeries","");
-        h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
-        if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
-        h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
-      } else if(st==="piramides"){
-        h+=_fld("Explica la pirámide",`<textarea class="input" rows="3" oninput="tf['piramTexto']=this.value">${esc(tf.piramTexto||"")}</textarea>`)+_time("Parcial medio (/500 m)","parcial","mm:ss");
-      }
+  } else if(t==="erg"){ h+=ergFields(false); }
+  else if(t==="agua"){ h+=ergFields(true); }
+  const blocked=tfBlockKey&&tfBlocking;
+  const used=blocked?((S.trainSnooze&&S.trainSnooze[tfBlockKey]&&S.trainSnooze[tfBlockKey].count)||0):0;
+  const btns=`<button class="btn primary" style="margin-top:14px" onclick="saveTraining()">Guardar entreno</button>`+
+    (blocked&&used<2?`<button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="snoozeTraining()">Posponer 5 min (${used}/2)</button>`:"");
+  document.getElementById("pageBody").innerHTML=`<div class="note">${(tfDate&&tfDate!==isoToday())?"Entreno del "+fmtD(tfDate):"Entreno de hoy"}${blocked?" · debes registrarlo para seguir":""}</div>${h}${btns}`;
+}
+function ergFields(water){
+  let h="";
+  if(water)h+=_sel("Bote","bote",[["1x","1x"],["2x","2x"],["2-","2-"],["4x","4x"],["4+","4+"],["4-","4-"],["8+","8+"]],false);
+  h+=_num("Distancia total (m)","distTotal","m")+_time("Tiempo total","timeTotal","mm:ss");
+  h+=_sel("Tipo de sesión","ergTipo",[["rodaje","Rodaje"],["series","Series"],["test","Test"]],true);
+  if(tf.ergTipo==="rodaje"){
+    if(!water)h+=_time("Parcial del rodaje (/500 m)","parcial","mm:ss");
+  } else if(tf.ergTipo==="test"){
+    h+=_sel("Distancia del test","testDist",[["500","500 m"],["1000","1000 m"],["2000","2000 m"],["6000","6000 m"]],false)+_time("Tiempo del test","testTime","mm:ss");
+  } else if(tf.ergTipo==="series"){
+    h+=_sel("Tipo de series","ergSerieTipo",[["tiempo","Series de tiempo"],["distancia","Series de distancia"],["piramides","Pirámides"],["intervalos","Intervalos"]],true);
+    const st=tf.ergSerieTipo;
+    if(st==="tiempo"||st==="distancia"){
+      h+=(st==="tiempo"?_time("Tiempo de cada serie","tSerie","mm:ss"):_num("Distancia de cada serie (m)","dSerie","m"));
+      h+=_time("Descanso entre series","tDesc","mm:ss")+_num("Nº de series","nSeries","");
+      h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
+      if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
+      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
+    } else if(st==="intervalos"){
+      h+=_num("Paladas fuertes","palFuertes","")+_num("Paladas suaves","palSuaves","")+_num("Nº de series","nSeries","");
+      h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
+      if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
+      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
+    } else if(st==="piramides"){
+      h+=_fld("Explica la pirámide",`<textarea class="input" rows="3" oninput="tf['piramTexto']=this.value">${esc(tf.piramTexto||"")}</textarea>`);
+      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
     }
-  } else if(t==="agua"){
-    h+=`<div class="note warn">El registro de remo en agua lo afinamos en el siguiente paso. De momento anota lo básico.</div>`;
-    h+=_num("Distancia (m)","distTotal","m")+_time("Tiempo total","timeTotal","mm:ss")+_fld("Notas",`<textarea class="input" rows="2" oninput="tf['notas']=this.value">${esc(tf.notas||"")}</textarea>`);
   }
-  const btns=`<button class="btn primary" style="margin-top:14px" onclick="saveTraining()">Guardar entreno</button>`+(tfBlockKey?`<button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="skipTraining()">Ahora no</button>`:"");
-  document.getElementById("pageBody").innerHTML=`<div class="note">${(tfDate&&tfDate!==isoToday())?"Entreno del "+fmtD(tfDate):"Entreno de hoy"}</div>${h}${btns}`;
+  return h;
 }
 function saveTraining(){
   if(!tf.type){toast("Elige el tipo de entreno");return;}
@@ -925,13 +937,17 @@ function saveTraining(){
   Object.keys(tf).forEach(k=>{if(tf[k]!==""&&tf[k]!=null)log[k]=tf[k];});
   if(tf.type==="erg"&&tf.ergTipo==="test"&&tf.testDist&&tf.testTime){const secs=parseClock(tf.testTime);const dd=tf.testDist;const prev=S.bestMarks[dd];
     if(secs!=null&&(!prev||secs<prev.secs)){S.bestMarks[dd]={time:tf.testTime,secs,date:log.date};setTimeout(()=>toast("¡Nueva mejor marca en "+dd+" m!"),300);}}
-  S.trainings.push(log);if(tfBlockKey)S.trainDone[tfBlockKey]=true;
+  S.trainings.push(log);if(tfBlockKey){S.trainDone[tfBlockKey]=true;if(S.trainSnooze)delete S.trainSnooze[tfBlockKey];}
   save();closePage();toast("Entreno registrado");}
-function skipTraining(){if(tfBlockKey)S.trainDone[tfBlockKey]=true;save();closePage();}
+function snoozeTraining(){if(!tfBlockKey)return;S.trainSnooze=S.trainSnooze||{};const cur=S.trainSnooze[tfBlockKey]||{count:0};
+  if(cur.count>=2){toast("Ya no se puede posponer más");return;}
+  S.trainSnooze[tfBlockKey]={count:cur.count+1,until:Date.now()+5*60000};save();closePage();toast(`Pospuesto 5 min (${cur.count+1}/2)`);}
 function checkTrainings(){if(weighDue())return;const pg=document.getElementById("page");if(pg&&pg.classList.contains("show"))return;
-  const items=daySchedule(todayKey());const nowM=new Date().getHours()*60+new Date().getMinutes();
+  const items=daySchedule(todayKey());const nowM=new Date().getHours()*60+new Date().getMinutes();const now=Date.now();
   for(let i=0;i<items.length;i++){const it=items[i];if(it.type!=="train")continue;const e=resolveEndMin(items,i);
-    if(nowM>=e){const key=isoToday()+"|"+blkStart(it);if(!S.trainDone[key]){openTrainForm({date:isoToday(),blockKey:key});return;}}}}
+    if(nowM>=e){const key=isoToday()+"|"+blkStart(it);if(S.trainDone[key])continue;
+      const sn=S.trainSnooze&&S.trainSnooze[key];if(sn&&sn.until>now)continue;
+      openTrainForm({date:isoToday(),blockKey:key,blocking:true});return;}}}
 function trainSummary(l){const m={agua:"Agua",erg:"Ergómetro",pesas:"Pesas",bici:"Bici",correr:"Correr"}[l.type]||l.type;let x="";
   if(l.type==="erg")x=[l.ergTipo||"",l.distTotal?l.distTotal+" m":"",l.timeTotal||""].filter(Boolean).join(" · ");
   else if(l.type==="pesas")x=[l.pesasTipo||"",l.fatiga?"fatiga "+l.fatiga:""].filter(Boolean).join(" · ");
@@ -944,6 +960,63 @@ function renderRecentTrainings(){const el=document.getElementById("recentTrainin
   el.innerHTML='<div class="label" style="margin:12px 0 2px">Últimos entrenos</div>'+list.map(l=>{const s=trainSummary(l);return `<div class="row" style="padding:9px 0"><div class="grow"><div class="r-t">${s.title}</div><div class="r-s">${esc(s.sub)}</div></div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`;}).join("");}
 function renderBestMarks(){const el=document.getElementById("bestMarks");if(!el)return;const ds=["500","1000","2000","6000"];
   el.innerHTML=ds.map(d=>{const b=S.bestMarks[d];return `<div class="row" style="padding:11px 16px"><div class="r-t" style="flex:0 0 70px">${d} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${b?b.time:"—"}</div>${b?`<div class="r-s" style="color:var(--faint)">${fmtD(b.date)}</div>`:""}</div>`;}).join("");}
+/* ===== RESUMEN DE ENTRENAMIENTOS ===== */
+let statsPeriod="total";
+function daysAgoISO(n){const d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function inPeriod(dt,p){if(p==="total")return true;if(p==="hoy")return dt===isoToday();const days={semana:7,mes:30,t3:90,ano:365}[p];return dt>=daysAgoISO(days-1);}
+function _n(v){const x=parseFloat((""+(v==null?"":v)).replace(",","."));return isNaN(x)?0:x;}
+function _secs(v){return parseClock(v)||0;}
+function durFmt(s){s=Math.round(s);if(!s)return "0";const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?h+"h "+pad(m)+"min":m+"min";}
+function srow(label,val){return `<div class="row" style="padding:8px 16px"><div class="grow r-t" style="font-weight:500">${label}</div><div class="num" style="font-weight:700">${val}</div></div>`;}
+function shead(t){return `<div class="section-h"><h2>${t}</h2></div>`;}
+function ergDetail(l){const d=l.distTotal?l.distTotal+" m":"";
+  if(l.ergTipo==="rodaje")return "Rodaje"+(d?" · "+d:"");
+  const st=l.ergSerieTipo;const bl=(+l.nBloques>1)?` ×${l.nBloques}bl`:"";
+  if(st==="tiempo")return `Series tiempo · ${l.nSeries||"?"}×${l.tSerie||"?"}`+bl;
+  if(st==="distancia")return `Series dist · ${l.nSeries||"?"}×${l.dSerie||"?"}m`+bl;
+  if(st==="intervalos")return `Intervalos · ${l.palFuertes||"?"}f/${l.palSuaves||"?"}s ×${l.nSeries||"?"}`+bl;
+  if(st==="piramides")return "Pirámide";
+  return "Series";}
+function openStats(){statsPeriod="total";pageReturn=renderPerfil;document.getElementById("pageBack").style.display="flex";document.getElementById("pageTitle").textContent="Resumen de entrenamientos";renderStats();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderStats(){
+  const periods=[["total","Total"],["ano","Año"],["t3","3 meses"],["mes","Mes"],["semana","Semana"],["hoy","Hoy"]];
+  const pills=periods.map(([k,t])=>`<button class="pill${statsPeriod===k?" on":""}" onclick="statsPeriod='${k}';renderStats()">${t}</button>`).join("");
+  const L=S.trainings.filter(l=>inPeriod(l.date,statsPeriod));
+  const by=t=>L.filter(l=>l.type===t);
+  const correr=by("correr"),bici=by("bici"),pesas=by("pesas"),erg=by("erg"),agua=by("agua");
+  let h=`<div class="card"><div class="label">Periodo</div><div class="pills">${pills}</div></div>`;
+  const totMin=L.reduce((a,l)=>a+_n(l.min)*60+_secs(l.timeTotal),0);
+  h+=shead("General")+`<div class="card flush">`+srow("Entrenos totales",L.length)+srow("Tiempo total entrenado",durFmt(totMin))+
+    srow("Agua",agua.length)+srow("Ergómetro",erg.length)+srow("Pesas",pesas.length)+srow("Bici",bici.length)+srow("Correr",correr.length)+`</div>`;
+  if(correr.length){const km=correr.reduce((a,l)=>a+_n(l.km),0),min=correr.reduce((a,l)=>a+_n(l.min),0);
+    h+=shead("Correr")+`<div class="card flush">`+srow("Entrenos",correr.length)+srow("En cinta",correr.filter(l=>l.correrModo==="cinta").length)+srow("Libre",correr.filter(l=>l.correrModo==="libre").length)+
+      srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",correr.filter(l=>l.entreno==="series").length)+srow("Fondo",correr.filter(l=>l.entreno==="fondo").length)+`</div>`;}
+  if(bici.length){const km=bici.reduce((a,l)=>a+_n(l.km),0),min=bici.reduce((a,l)=>a+_n(l.min),0);
+    h+=shead("Bici")+`<div class="card flush">`+srow("Entrenos",bici.length)+srow("Estática",bici.filter(l=>l.biciModo==="estatica").length)+srow("Carretera",bici.filter(l=>l.biciModo==="carretera").length)+srow("BTT",bici.filter(l=>l.biciModo==="btt").length)+
+      srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",bici.filter(l=>l.entreno==="series").length)+srow("Fondo",bici.filter(l=>l.entreno==="fondo").length)+`</div>`;}
+  if(pesas.length){const fat=pesas.map(l=>_n(l.fatiga)).filter(x=>x>0),favg=fat.length?fat.reduce((a,b)=>a+b,0)/fat.length:0;
+    h+=shead("Pesas")+`<div class="card flush">`+srow("Entrenos",pesas.length)+srow("Potencia",pesas.filter(l=>l.pesasTipo==="potencia").length)+srow("Resistencia",pesas.filter(l=>l.pesasTipo==="resistencia").length)+
+      srow("Fatiga media",favg?fmt(favg,1)+"/10":"—")+`</div>`;}
+  if(erg.length){const dist=erg.reduce((a,l)=>a+_n(l.distTotal),0),tsec=erg.reduce((a,l)=>a+_secs(l.timeTotal),0),ser=erg.filter(l=>l.ergTipo==="series");
+    h+=shead("Ergómetro")+`<div class="card flush">`+srow("Entrenos",erg.length)+srow("Rodajes",erg.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",ser.length)+srow("Tests",erg.filter(l=>l.ergTipo==="test").length)+
+      srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+
+      srow("Series de tiempo",ser.filter(l=>l.ergSerieTipo==="tiempo").length)+srow("Series de distancia",ser.filter(l=>l.ergSerieTipo==="distancia").length)+srow("Intervalos",ser.filter(l=>l.ergSerieTipo==="intervalos").length)+srow("Pirámides",ser.filter(l=>l.ergSerieTipo==="piramides").length)+`</div>`;
+    const list=erg.filter(l=>l.ergTipo==="rodaje"||l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
+    if(list.length)h+=`<div class="label" style="margin:14px 2px 6px">Rodajes y series · cronológico (parcial /500 m)</div><div class="card flush">`+
+      list.map(l=>`<div class="row" style="padding:9px 16px"><div class="grow"><div class="r-t">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${esc(l.parcial||"—")}</div></div>`).join("")+`</div>`;}
+  if(agua.length){const dist=agua.reduce((a,l)=>a+_n(l.distTotal),0),tsec=agua.reduce((a,l)=>a+_secs(l.timeTotal),0);
+    h+=shead("Agua")+`<div class="card flush">`+srow("Salidas",agua.length)+srow("Rodajes",agua.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",agua.filter(l=>l.ergTipo==="series").length)+srow("Tests",agua.filter(l=>l.ergTipo==="test").length)+
+      srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+`</div>`;
+    const boats=["1x","2x","2-","4x","4+","4-","8+"];
+    const boatRows=boats.map(b=>{const bl=agua.filter(l=>l.bote===b);if(!bl.length)return "";const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0),sc=bl.filter(l=>l.ergTipo==="series").length;
+      return `<div class="row" style="padding:9px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${b}</div><div class="grow r-s">${fmt(d/1000,1)} km · ${durFmt(ts)} · ${sc} series</div><div class="r-s" style="color:var(--faint)">${bl.length} sal.</div></div>`;}).join("");
+    h+=`<div class="label" style="margin:14px 2px 6px">Por tipo de barco</div><div class="card flush">`+(boatRows||'<div class="note" style="padding:14px">Sin barco indicado.</div>')+`</div>`;
+    const aser=agua.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
+    if(aser.length)h+=`<div class="label" style="margin:14px 2px 6px">Series en agua (sin parcial)</div><div class="card flush">`+
+      aser.map(l=>`<div class="row" style="padding:9px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${esc(l.bote||"?")}</div><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
+  if(!L.length)h+=`<div class="empty" style="padding:30px">Sin entrenos en este periodo.</div>`;
+  document.getElementById("pageBody").innerHTML=h;
+}
 document.getElementById("pageBack").onclick=closePage;
 function savePageField(field,inputId,k){const v=parseFloat(document.getElementById(inputId).value);
   if(isNaN(v)){toast("Valor no válido");return;}S.perfil[field]=v;
