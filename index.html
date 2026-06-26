@@ -191,6 +191,16 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     <div class="card flush" id="profileRows"></div>
     <div class="section-h"><h2>Rendimiento</h2><span class="note">CMD · 19/03/2026</span></div>
     <div class="card flush" id="physRows"></div>
+    <div class="section-h"><h2>Configuración</h2></div>
+    <div class="card">
+      <div class="label">Edición de planificación</div>
+      <button class="btn sm" style="width:100%;margin-top:8px;text-align:left" onclick="openCfgHorario()">Cambiar horario de un día</button>
+      <button class="btn sm" style="width:100%;margin-top:8px;text-align:left" onclick="openCfgDieta()">Cambiar dieta de un día (intensidad / plato)</button>
+      <div class="row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="grow"><div class="r-t">Modo desarrollador</div><div class="r-s" id="devNote">Desbloquea todo como si fuese domingo</div></div>
+        <button class="btn sm ghost" id="devToggle" onclick="toggleDev()">OFF</button>
+      </div>
+    </div>
     <div class="section-h"><h2>Copia de seguridad</h2></div>
     <div class="card">
       <div class="note">Tus datos viven solo en este móvil. Exporta de vez en cuando.</div>
@@ -220,6 +230,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 
   <!-- PLANIFICAR -->
   <section class="view" id="v-planificar">
+    <div class="card" id="lockBanner" style="display:none"></div>
     <div class="card" id="planDue" style="display:none"></div>
     <div class="card">
       <div class="label">Intensidad de la semana</div>
@@ -232,9 +243,11 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     <div class="section-h"><h2>Macros de la semana</h2></div>
     <div class="card flush" id="weekTable"></div>
     <div class="section-h"><h2>Horario por día</h2></div>
-    <div class="card"><div class="label">Día de la semana</div><div class="pills" id="wdPills"></div></div>
+    <div class="card"><div class="label">Día de la semana</div><div class="pills" id="wdPills"></div>
+      <div class="label" style="margin-top:12px">Cobertura del día (24 h)</div><div id="schedCoverage"></div></div>
     <div class="card flush" id="schedList"></div>
     <div class="card" id="schedTools"></div>
+    <div class="card" id="schedTemplate"></div>
     <div class="card">
       <div class="label">Añadir bloque</div>
       <div class="grid3">
@@ -299,7 +312,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.0";
+const APP_VERSION="1.1";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -524,10 +537,8 @@ function generateWeekDishes(){
     });});
   S.weekDishes=week;return week;}
 function defaultState(){
-  const train=[{start:"10:00",end:"12:00",label:"Entreno agua",type:"train"},{start:"18:00",end:"20:00",label:"Entreno tarde",type:"train"}];
   const sched={};
-  WD.forEach(d=>{if(d==="sun"){sched[d]=[{start:"11:00",end:"14:00",label:"Batch cooking · cocinar semana",type:"other"}];}
-    else{sched[d]=JSON.parse(JSON.stringify(train));}});
+  WD.forEach(d=>{sched[d]=[];});
   const intensityByDay={mon:"intenso",tue:"moderado",wed:"intenso",thu:"moderado",fri:"suave",sat:"intenso",sun:"descanso"};
   return {perfil:{nombre:"Manuel Gironés Benavente",sexo:"Hombre",nacimiento:"2008-04-15",
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
@@ -546,6 +557,9 @@ function migrate(s){
   if(!s.intensityByDay)s.intensityByDay=d.intensityByDay;
   if(!("weekPlan" in s))s.weekPlan=null;
   if(!s.schedule)s.schedule=d.schedule;
+  if(typeof s.dev!=="boolean")s.dev=false;
+  if(!("scheduleTemplate" in s))s.scheduleTemplate=null;
+  if(!s.v11clean){WD.forEach(wd=>{if(Array.isArray(s.schedule[wd]))s.schedule[wd]=s.schedule[wd].filter(b=>b.label!=="Entreno agua"&&b.label!=="Entreno tarde");});s.v11clean=true;}
   WD.forEach(wd=>{(s.schedule[wd]||[]).forEach(b=>{if(!b.start&&b.time)b.start=b.time;if(!("end" in b))b.end="";delete b.time;});});
   if(!s.meals)s.meals={};
   if(!s.recipes)s.recipes=JSON.parse(JSON.stringify(RECIPES_DEFAULT));
@@ -658,6 +672,8 @@ function renderPerfil(){
   items.forEach(m=>{const b=document.createElement("button");b.className="mrow";
     b.innerHTML=`<span class="m-name">${m.name}</span><span class="m-prev"><span class="m-val">${m.prev}</span><span class="chev">›</span></span>`;
     b.onclick=()=>openMetric(m.key);ph.appendChild(b);});
+  const dt=document.getElementById("devToggle");if(dt){dt.textContent=S.dev?"ON":"OFF";dt.className="btn sm"+(S.dev?" teal":" ghost");}
+  const dn=document.getElementById("devNote");if(dn)dn.textContent=S.dev?"Activo · todo desbloqueado (como domingo)":"Desbloquea todo como si fuese domingo";
 }
 /* ---------- series [{date,value}] + gráfica/estadísticas de página ---------- */
 function arrRaw(metric){return series(metric).map(p=>({date:p.date,value:p[metric]}));}
@@ -750,6 +766,72 @@ function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title
   document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 let pageReturn=renderPerfil;
 function closePage(){document.getElementById("page").classList.remove("show");if(pageReturn)pageReturn();}
+function val(id){return document.getElementById(id).value;}
+let curView="perfil";
+/* ===== BLOQUEO · DOMINGO · DEV ===== */
+function isSunday(){return new Date().getDay()===0;}
+function planningUnlocked(){return !!S.dev||isSunday();}
+function lockGuard(){if(planningUnlocked())return false;toast("Bloqueado · se edita el domingo. Cambios puntuales en Perfil → Configuración");return true;}
+function toggleDev(){S.dev=!S.dev;save();renderPerfil();if(curView==="planificar")renderPlanificar();toast(S.dev?"Modo desarrollador ON · todo desbloqueado":"Modo desarrollador OFF");}
+/* ===== COBERTURA 24 h ===== */
+function coverageGaps(wd){const items=daySchedule(wd);const cov=items.map((it,i)=>[toMin(blkStart(it)),resolveEndMin(items,i)]).sort((a,b)=>a[0]-b[0]);
+  const gaps=[];let cur=0;cov.forEach(([s,e])=>{if(s>cur)gaps.push([cur,s]);cur=Math.max(cur,e);});if(cur<1440)gaps.push([cur,1440]);return gaps;}
+function typeColor(t){return {train:"var(--ember)",class:"var(--teal)",meal:"#E8A03D",other:"#7aa2b0"}[t]||"#7aa2b0";}
+function coverageBar(wd){const items=daySchedule(wd);const spans=items.map((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);return `<div style="position:absolute;left:${s/14.4}%;width:${(e-s)/14.4}%;top:0;bottom:0;background:${typeColor(it.type)};opacity:.85"></div>`;}).join("");
+  return `<div style="position:relative;height:12px;border-radius:6px;background:#ffffff14;overflow:hidden;margin-top:4px">${spans}</div>
+   <div style="display:flex;justify-content:space-between;color:var(--faint);font-size:10px;margin-top:3px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24 h</span></div>`;}
+function gapsNote(wd){const g=coverageGaps(wd);if(!g.length)return '<div class="note" style="color:var(--teal);margin-top:8px">✓ Día completo, sin huecos.</div>';
+  const hm=m=>m>=1440?"24:00":minHM(m);
+  const list=g.map(([s,e])=>`${hm(s)}–${hm(e)}`).join(" · ");
+  return `<div class="note warn" style="margin-top:8px">Te quedan huecos sin planificar: <b>${list}</b>. Rellénalos para cubrir las 24 h.</div>`;}
+/* ===== CONFIG · HORARIO PUNTUAL ===== */
+let cfgHWd=null;
+function openCfgHorario(){cfgHWd=todayKey();pageReturn=renderPerfil;document.getElementById("pageTitle").textContent="Cambiar horario de un día";renderCfgHorario();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderCfgHorario(){const wd=cfgHWd;const items=daySchedule(wd);
+  const pills=WD.map(d=>`<button class="pill${d===wd?' on':''}" onclick="cfgHWd='${d}';renderCfgHorario()">${WDLABEL[d]}</button>`).join("");
+  const rows=items.length?items.map((it,i)=>{const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
+    return `<div class="row" style="padding:10px 14px"><div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(it.label)}</div></div><span class="tag ${it.type||'other'}">${typeLabel(it.type)}</span><button class="btn-del" onclick="cfgDelBlock('${wd}',${i})">×</button></div>`;}).join("")
+    :'<div class="empty" style="padding:20px">Día sin bloques.</div>';
+  document.getElementById("pageBody").innerHTML=`
+   <div class="note">Ajusta el horario de un día concreto durante la semana (esto sí funciona con la planificación bloqueada).</div>
+   <div class="card" style="margin-top:12px"><div class="label">Día</div><div class="pills">${pills}</div>
+     <div class="label" style="margin-top:12px">Cobertura (24 h)</div>${coverageBar(wd)}${gapsNote(wd)}</div>
+   <div class="card flush" style="margin-top:12px">${rows}</div>
+   <div class="card" style="margin-top:12px"><div class="label">Añadir bloque</div>
+     <div class="grid3">
+       <div class="field"><label>Desde</label><input class="input num" id="cfgStart" type="time" value="08:00"></div>
+       <div class="field"><label>Hasta</label><input class="input num" id="cfgEnd" type="time" value="08:30"></div>
+       <div class="field"><label>Tipo</label><select class="input" id="cfgType"><option value="train">Entreno</option><option value="class">Clase / Universidad</option><option value="meal">Comida</option><option value="other">Otro</option></select></div>
+     </div>
+     <div class="field" style="margin-top:8px"><label>Nombre</label><input class="input" id="cfgLabel" placeholder="Ej: universidad"></div>
+     <button class="btn teal" style="margin-top:10px" onclick="cfgAddBlock('${wd}')">Añadir</button>
+   </div>`;}
+function cfgDelBlock(wd,i){const it=daySchedule(wd)[i];S.schedule[wd]=(S.schedule[wd]||[]).filter(x=>x!==it);save();renderCfgHorario();}
+function cfgAddBlock(wd){const start=val('cfgStart'),end=val('cfgEnd'),label=val('cfgLabel').trim(),type=val('cfgType');
+  if(!label){toast("Ponle un nombre");return;}if(!isHM(start)){toast("Pon la hora de inicio");return;}
+  if(isHM(end)&&toMin(end)<=toMin(start)){toast("La hora de fin debe ser posterior");return;}
+  (S.schedule[wd]=S.schedule[wd]||[]).push({start,end:isHM(end)?end:"",label,type});save();renderCfgHorario();toast("Bloque añadido");}
+/* ===== CONFIG · DIETA POR DÍA ===== */
+let cfgDWd=null;
+function openCfgDieta(){cfgDWd=todayKey();pageReturn=renderPerfil;document.getElementById("pageTitle").textContent="Cambiar dieta de un día";renderCfgDieta();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderCfgDieta(){const wd=cfgDWd;const it=dayIntensity(wd);
+  const pills=WD.map(d=>`<button class="pill${d===wd?' on':''}" onclick="cfgDWd='${d}';renderCfgDieta()">${WDLABEL[d]}</button>`).join("");
+  const intOpts=INTENS.map(i=>`<option value="${i}"${i===it?' selected':''}>${ENGINE.dayTypes[i].label}</option>`).join("");
+  const dishOpts=s=>LIBRARY.map(d=>`<option value="${d.id}"${d.id===s?' selected':''}>${d.name}</option>`).join("");
+  document.getElementById("pageBody").innerHTML=`
+   <div class="note">Cambia la intensidad y/o el plato de un día concreto, aunque la semana esté bloqueada.</div>
+   <div class="card" style="margin-top:12px"><div class="label">Día</div><div class="pills">${pills}</div></div>
+   <div class="card" style="margin-top:12px">
+     <div class="field"><label>Intensidad del día</label><select class="input" onchange="cfgSetIntensity('${wd}',this.value)">${intOpts}</select></div>
+     <div class="field" style="margin-top:10px"><label>Plato de comida</label><select class="input" onchange="cfgSetDish('${wd}','comida',this.value)">${dishOpts(assignedDish(wd,'comida'))}</select></div>
+     <div class="field" style="margin-top:10px"><label>Plato de cena</label><select class="input" onchange="cfgSetDish('${wd}','cena',this.value)">${dishOpts(assignedDish(wd,'cena'))}</select></div>
+   </div>
+   <div class="card" style="margin-top:12px"><div class="label">Resumen del día</div><div id="cfgDietaSum"></div></div>`;
+  renderCfgDietaSum(wd);}
+function renderCfgDietaSum(wd){const dm=dayRecipeMacros(wd);const goal=dayMacrosFor(wd);
+  document.getElementById("cfgDietaSum").innerHTML=`<div class="r-s">Comida: <b>${esc(mealName(wd,'comida'))}</b></div><div class="r-s" style="margin-top:3px">Cena: <b>${esc(mealName(wd,'cena'))}</b></div><div class="r-s" style="margin-top:8px;color:var(--faint)">Día ≈ ${dm.kt} kcal · P${dm.P} C${dm.C} G${dm.F} (obj ${goal.kt})</div>`;}
+function cfgSetIntensity(wd,v){S.intensityByDay[wd]=v;if(S.weekPlan&&S.weekPlan.days[wd]){S.weekPlan.days[wd]={intensity:v,macros:dayMacros(S.weekPlan.planWeight,S.weekPlan.planGrasa,S.weekPlan.factor,v)};}save();renderCfgDieta();toast("Intensidad actualizada");}
+function cfgSetDish(wd,slot,id){if(!S.weekDishes)generateWeekDishes();S.weekDishes[wd]=S.weekDishes[wd]||{};S.weekDishes[wd][slot]=+id;save();renderCfgDieta();toast("Plato actualizado");}
 document.getElementById("pageBack").onclick=closePage;
 function savePageField(field,inputId,k){const v=parseFloat(document.getElementById(inputId).value);
   if(isNaN(v)){toast("Valor no válido");return;}S.perfil[field]=v;
@@ -863,9 +945,14 @@ function planWeight(){const lim=new Date(Date.now()-7*86400000);
 function planDueNow(){if(!S.weekPlan)return true;if(new Date().getDay()===0&&S.lastPlan!==isoToday())return true;return false;}
 const STORE={mon:"Nevera",tue:"Nevera",wed:"Nevera",thu:"Congelar",fri:"Congelar",sat:"Congelar",sun:"Congelar"};
 function renderPlanificar(){
+  const locked=!planningUnlocked();
+  const lb=document.getElementById("lockBanner");
+  if(locked){lb.style.display="block";lb.innerHTML=`<div class="r-t" style="color:var(--ember)">Planificación bloqueada</div>
+    <div class="note" style="margin-top:4px">La semana se planifica el <b>domingo</b>. Para un cambio puntual entre semana, ve a <b>Perfil → Configuración</b> (horario o dieta de un día). O activa el <b>Modo desarrollador</b>.</div>`;}
+  else lb.style.display="none";
   const due=document.getElementById("planDue");
-  if(planDueNow()){due.style.display="block";
-    due.innerHTML=`<div class="r-t" style="color:var(--ember)">${new Date().getDay()===0?"Es domingo: planifica tu semana":"Planifica tu semana"}</div>
+  if(!locked&&planDueNow()){due.style.display="block";
+    due.innerHTML=`<div class="r-t" style="color:var(--ember)">${isSunday()?"Es domingo: planifica tu semana":"Planifica tu semana"}</div>
       <div class="note" style="margin-top:4px">Asigna la intensidad de cada día y pulsa “Calcular y guardar plan”. Cocinas el domingo, así que los macros se fijan con tu peso de esta semana.</div>`;
   } else due.style.display="none";
   const counts={};INTENS.forEach(k=>counts[k]=0);WD.forEach(wd=>counts[S.intensityByDay[wd]]++);
@@ -875,8 +962,9 @@ function renderPlanificar(){
   document.getElementById("intensDays").innerHTML=WD.map(wd=>{const k=S.intensityByDay[wd];const c=ENGINE.dayTypes[k].c;
     return `<div class="row" style="padding:9px 0"><span class="zdot" style="background:${c}"></span>
       <div class="r-t" style="flex:0 0 40px">${WDLABEL[wd]}</div>
-      <select class="input intensel" data-wd="${wd}" style="flex:1">${opts(k)}</select></div>`;}).join("");
-  document.querySelectorAll(".intensel").forEach(sel=>sel.onchange=()=>{S.intensityByDay[sel.dataset.wd]=sel.value;save();renderPlanificar();});
+      <select class="input intensel" data-wd="${wd}" style="flex:1" ${locked?"disabled":""}>${opts(k)}</select></div>`;}).join("");
+  document.querySelectorAll(".intensel").forEach(sel=>sel.onchange=()=>{if(lockGuard())return;S.intensityByDay[sel.dataset.wd]=sel.value;save();renderPlanificar();});
+  const sb=document.getElementById("savePlanBtn");sb.disabled=locked;sb.style.opacity=locked?.5:1;
   const pw=planWeight();document.getElementById("planWeightVal").textContent=fmt(pw.w)+" kg";
   document.getElementById("planWeightNote").textContent=pw.basis;
   const wt=document.getElementById("weekTable");
@@ -888,40 +976,54 @@ function renderPlanificar(){
           <div class="r-s" style="margin-top:4px">P ${m.P} · C ${m.C} · G ${m.F} g</div></div>
         <div class="num" style="font-weight:700;color:var(--ember)">${m.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div></div>`;}).join("");
   } else wt.innerHTML='<div class="empty" style="padding:22px">Aún sin plan. Pulsa “Calcular y guardar plan” arriba.</div>';
-  renderSchedule();
+  renderSchedule(locked);
 }
 let copySel=new Set();
-function renderSchedule(){
+function renderSchedule(locked){
+  if(locked===undefined)locked=!planningUnlocked();
   const wp=document.getElementById("wdPills");wp.innerHTML="";
   WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;copySel=new Set();renderSchedule();};wp.appendChild(b);});
+  document.getElementById("schedCoverage").innerHTML=coverageBar(selWeekday)+gapsNote(selWeekday);
   const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday);
-  if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. Añade un bloque abajo.</div>';
+  if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. '+(locked?'Edítalo el domingo o en Configuración.':'Añade un bloque abajo.')+'</div>';
   items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 16px";
     const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
-    r.innerHTML=`<div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(it.label)}</div></div><span class="tag ${it.type||"other"}">${typeLabel(it.type)}</span><button class="btn-del">×</button>`;
-    r.querySelector(".btn-del").onclick=()=>{S.schedule[selWeekday]=S.schedule[selWeekday].filter(x=>x!==it);save();renderSchedule();};list.appendChild(r);});
-  // Replicar día
+    r.innerHTML=`<div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(it.label)}</div></div><span class="tag ${it.type||"other"}">${typeLabel(it.type)}</span>${locked?"":'<button class="btn-del">×</button>'}`;
+    if(!locked){r.querySelector(".btn-del").onclick=()=>{S.schedule[selWeekday]=S.schedule[selWeekday].filter(x=>x!==it);save();renderSchedule();};}list.appendChild(r);});
+  // Replicar día + plantilla
   const tools=document.getElementById("schedTools");
-  const others=WD.filter(d=>d!==selWeekday);
-  tools.innerHTML=`<div class="label">Replicar ${WDLABEL_LONG[selWeekday]} a otros días</div>
-    <div class="pills" id="copyPills" style="margin-bottom:10px"></div>
-    <button class="btn sm teal" id="copyApply">Replicar a los marcados</button>
-    <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques (sobrescribe). Luego edita cada uno por separado.</div>`;
-  const cp=document.getElementById("copyPills");
-  others.forEach(d=>{const b=document.createElement("button");b.className="pill"+(copySel.has(d)?" on":"");b.textContent=WDLABEL[d];
-    b.onclick=()=>{copySel.has(d)?copySel.delete(d):copySel.add(d);renderSchedule();};cp.appendChild(b);});
-  document.getElementById("copyApply").onclick=()=>{
-    if(!copySel.size){toast("Marca a qué días copiar");return;}
-    copySel.forEach(d=>{S.schedule[d]=JSON.parse(JSON.stringify(S.schedule[selWeekday]||[]));});
-    const n=copySel.size;copySel=new Set();save();renderSchedule();toast(`Horario replicado a ${n} día${n>1?"s":""}`);};
+  if(locked){tools.style.display="none";}
+  else{tools.style.display="block";const others=WD.filter(d=>d!==selWeekday);
+    tools.innerHTML=`<div class="label">Replicar ${WDLABEL_LONG[selWeekday]} a otros días</div>
+      <div class="pills" id="copyPills" style="margin-bottom:10px"></div>
+      <button class="btn sm teal" id="copyApply">Replicar a los marcados</button>
+      <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques (sobrescribe). Luego edita cada uno por separado.</div>`;
+    const cp=document.getElementById("copyPills");
+    others.forEach(d=>{const b=document.createElement("button");b.className="pill"+(copySel.has(d)?" on":"");b.textContent=WDLABEL[d];
+      b.onclick=()=>{copySel.has(d)?copySel.delete(d):copySel.add(d);renderSchedule();};cp.appendChild(b);});
+    document.getElementById("copyApply").onclick=()=>{if(lockGuard())return;
+      if(!copySel.size){toast("Marca a qué días copiar");return;}
+      copySel.forEach(d=>{S.schedule[d]=JSON.parse(JSON.stringify(S.schedule[selWeekday]||[]));});
+      const n=copySel.size;copySel=new Set();save();renderSchedule();toast(`Horario replicado a ${n} día${n>1?"s":""}`);};}
+  // Plantilla semana anterior
+  const tpl=document.getElementById("schedTemplate");
+  if(locked){tpl.style.display="none";}
+  else{tpl.style.display="block";const has=!!S.scheduleTemplate;
+    tpl.innerHTML=`<div class="label">Plantilla de horario</div>
+      <div class="note" style="margin:4px 0 10px">Carga el horario de tu última semana guardada como base y ajústalo. ${has?"":"<b>Aún no hay plantilla</b> (se guarda al pulsar “Calcular y guardar plan”)."}</div>
+      <button class="btn sm" id="tplLoad" ${has?"":"disabled style=opacity:.5"}>Usar plantilla de la semana anterior</button>`;
+    if(has)document.getElementById("tplLoad").onclick=()=>{if(lockGuard())return;
+      if(!confirm("Esto sobrescribe el horario actual de los 7 días con la plantilla guardada. ¿Seguir?"))return;
+      S.schedule=JSON.parse(JSON.stringify(S.scheduleTemplate));save();renderSchedule();toast("Plantilla cargada");};}
 }
-function savePlan(){const pw=planWeight();const g=+S.perfil.grasa,f=+S.perfil.factor;const days={};
+function savePlan(){if(lockGuard())return;const pw=planWeight();const g=+S.perfil.grasa,f=+S.perfil.factor;const days={};
+  S.scheduleTemplate=JSON.parse(JSON.stringify(S.schedule));
   WD.forEach(wd=>{const it=S.intensityByDay[wd];days[wd]={intensity:it,macros:dayMacros(pw.w,g,f,it)};});
   S.weekPlan={createdAt:isoToday(),weekStart:nextMondayISO(),planWeight:pw.w,planGrasa:g,factor:f,days};
   generateWeekDishes();
   S.lastPlan=isoToday();save();renderPlanificar();toast("Plan y platos de la semana guardados");}
 document.getElementById("savePlanBtn").onclick=savePlan;
-document.getElementById("sAdd").onclick=()=>{const start=document.getElementById("sStart").value,end=document.getElementById("sEnd").value,label=document.getElementById("sLabel").value.trim(),type=document.getElementById("sType").value;
+document.getElementById("sAdd").onclick=()=>{if(lockGuard())return;const start=document.getElementById("sStart").value,end=document.getElementById("sEnd").value,label=document.getElementById("sLabel").value.trim(),type=document.getElementById("sType").value;
   if(!label){toast("Ponle un nombre");return;}
   if(!isHM(start)){toast("Pon la hora de inicio");return;}
   if(isHM(end)&&toMin(end)<=toMin(start)){toast("La hora de fin debe ser posterior");return;}
@@ -937,7 +1039,7 @@ function renderComida(){const body=document.getElementById("comidaBody");
 function renderComidaWeek(body){
   let h="";
   if(!S.weekPlan)h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan en Planificar; muestro una estimación en vivo con tus intensidades actuales.</div></div>';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div><button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button></div><div class="card flush">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div>'+(planningUnlocked()?'<button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button>':'')+'</div><div class="card flush">';
   WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayRecipeMacros(wd);
     h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
@@ -968,7 +1070,7 @@ function dishIngLine(x){
   let s=`<b>${x.g}</b> g ${x.n}`;
   if(RAWF[x.k])s+=` <span style="color:var(--faint)">· en crudo ≈ ${ceilTo(x.g*RAWF[x.k],5)} g</span>`;
   return s;}
-function regenDishes(){generateWeekDishes();save();toast("Platos de la semana regenerados");renderComida();}
+function regenDishes(){if(lockGuard())return;generateWeekDishes();save();toast("Platos de la semana regenerados");renderComida();}
 function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);
   const isDish=(mk==="comida"||mk==="cena");
   const items=mealItems(wd,mk,sf);const mm=mealMacrosFor(wd,mk,sf);
@@ -1026,7 +1128,7 @@ document.getElementById("bIcs").onclick=()=>{let v=["BEGIN:VCALENDAR","VERSION:2
 
 /* ---------- navegación + reloj ---------- */
 const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos"};
-function nav(v){document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
   document.getElementById("v-"+v).classList.add("active");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
   document.getElementById("hEyebrow").textContent=v==="perfil"?"Mi plan":TITLES[v];
