@@ -249,7 +249,8 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     </div>
     <div class="section-h"><h2>Macros de la semana</h2></div>
     <div class="card flush" id="weekTable"></div>
-    <div class="section-h"><h2>Horario por día</h2></div>
+    <div class="section-h"><h2>Horario por semana</h2></div>
+    <div class="card" id="schedWeekCard"></div>
     <div class="card"><div class="label">Día de la semana</div><div class="pills" id="wdPills"></div>
       <div class="label" style="margin-top:12px">Cobertura del día (24 h)</div><div id="schedCoverage"></div></div>
     <div class="card flush" id="schedList"></div>
@@ -320,7 +321,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.4";
+const APP_VERSION="1.6";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -550,11 +551,11 @@ function defaultState(){
   const intensityByDay={mon:"intenso",tue:"moderado",wed:"intenso",thu:"moderado",fri:"suave",sat:"intenso",sun:"descanso"};
   return {perfil:{nombre:"Manuel Gironés Benavente",sexo:"Hombre",nacimiento:"2008-04-15",
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
-    schedule:sched,intensityByDay,weekPlan:null,meals:{},
+    schedule:sched,weekSchedules:{},intensityByDay,weekPlan:null,meals:{},
     recipes:JSON.parse(JSON.stringify(RECIPES_DEFAULT)),
     steps:buildSteps(),
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
-    tasks:[{id:id(),time:"08:00",label:"Pesarme en ayunas"}],
+    tasks:[{id:id(),time:"06:00",label:"Pesarme en ayunas"}],
     trainings:[],bestMarks:{"500":null,"1000":null,"2000":{time:"6:19",secs:379,date:"2026-03-19"},"6000":null},trainDone:{},trainSnooze:{},
     weighSnooze:null,lastWeigh:null,lastPlan:null};
 }
@@ -566,6 +567,7 @@ function migrate(s){
   if(!s.intensityByDay)s.intensityByDay=d.intensityByDay;
   if(!("weekPlan" in s))s.weekPlan=null;
   if(!s.schedule)s.schedule=d.schedule;
+  if(!s.weekSchedules){s.weekSchedules={};const k=isoOf(mondayOf(new Date()));s.weekSchedules[k]={};WD.forEach(wd=>{s.weekSchedules[k][wd]=(s.schedule&&Array.isArray(s.schedule[wd]))?s.schedule[wd]:[];});}
   if(typeof s.dev!=="boolean")s.dev=false;
   if(!("weighSnooze" in s))s.weighSnooze=null;
   if(!Array.isArray(s.trainings))s.trainings=[];
@@ -802,20 +804,20 @@ function planningUnlocked(){return !!S.dev||isSunday();}
 function lockGuard(){if(planningUnlocked())return false;toast("Bloqueado · se edita el domingo. Cambios puntuales en Perfil → Configuración");return true;}
 function toggleDev(){S.dev=!S.dev;save();renderPerfil();if(curView==="planificar")renderPlanificar();toast(S.dev?"Modo desarrollador ON · todo desbloqueado":"Modo desarrollador OFF");}
 /* ===== COBERTURA 24 h ===== */
-function coverageGaps(wd){const items=daySchedule(wd);const cov=items.map((it,i)=>[toMin(blkStart(it)),resolveEndMin(items,i)]).sort((a,b)=>a[0]-b[0]);
+function coverageGaps(wd,key){const items=daySchedule(wd,key);const cov=items.map((it,i)=>[toMin(blkStart(it)),resolveEndMin(items,i)]).sort((a,b)=>a[0]-b[0]);
   const gaps=[];let cur=0;cov.forEach(([s,e])=>{if(s>cur)gaps.push([cur,s]);cur=Math.max(cur,e);});if(cur<1440)gaps.push([cur,1440]);return gaps;}
 function typeColor(t){return (BT[t]&&BT[t].c)||"#7aa2b0";}
-function coverageBar(wd){const items=daySchedule(wd);const spans=items.map((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);return `<div style="position:absolute;left:${s/14.4}%;width:${(e-s)/14.4}%;top:0;bottom:0;background:${typeColor(it.type)};opacity:.85"></div>`;}).join("");
+function coverageBar(wd,key){const items=daySchedule(wd,key);const spans=items.map((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);return `<div style="position:absolute;left:${s/14.4}%;width:${(e-s)/14.4}%;top:0;bottom:0;background:${typeColor(it.type)};opacity:.85"></div>`;}).join("");
   return `<div style="position:relative;height:12px;border-radius:6px;background:#ffffff14;overflow:hidden;margin-top:4px">${spans}</div>
    <div style="display:flex;justify-content:space-between;color:var(--faint);font-size:10px;margin-top:3px"><span>0</span><span>6</span><span>12</span><span>18</span><span>24 h</span></div>`;}
-function gapsNote(wd){const g=coverageGaps(wd);if(!g.length)return '<div class="note" style="color:var(--teal);margin-top:8px">✓ Día completo, sin huecos.</div>';
+function gapsNote(wd,key){const g=coverageGaps(wd,key);if(!g.length)return '<div class="note" style="color:var(--teal);margin-top:8px">✓ Día completo, sin huecos.</div>';
   const hm=m=>m>=1440?"24:00":minHM(m);
   const list=g.map(([s,e])=>`${hm(s)}–${hm(e)}`).join(" · ");
   return `<div class="note warn" style="margin-top:8px">Te quedan huecos sin planificar: <b>${list}</b>. Rellénalos para cubrir las 24 h.</div>`;}
 /* ===== CONFIG · HORARIO PUNTUAL ===== */
 let cfgHWd=null;
 function openCfgHorario(){cfgHWd=todayKey();pageReturn=renderPerfil;document.getElementById("pageTitle").textContent="Cambiar horario de un día";renderCfgHorario();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-function renderCfgHorario(){const wd=cfgHWd;const items=daySchedule(wd);
+function renderCfgHorario(){const wd=cfgHWd;const wk=curWeekKey();const items=daySchedule(wd,wk);
   const pills=WD.map(d=>`<button class="pill${d===wd?' on':''}" onclick="cfgHWd='${d}';renderCfgHorario()">${WDLABEL[d]}</button>`).join("");
   const rows=items.length?items.map((it,i)=>{const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
     return `<div class="row" style="padding:10px 14px"><div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(blockName(it))}</div></div>${typeTag(it.type)}<button class="btn-del" onclick="cfgDelBlock('${wd}',${i})">×</button></div>`;}).join("")
@@ -823,7 +825,7 @@ function renderCfgHorario(){const wd=cfgHWd;const items=daySchedule(wd);
   document.getElementById("pageBody").innerHTML=`
    <div class="note">Ajusta el horario de un día concreto durante la semana (esto sí funciona con la planificación bloqueada).</div>
    <div class="card" style="margin-top:12px"><div class="label">Día</div><div class="pills">${pills}</div>
-     <div class="label" style="margin-top:12px">Cobertura (24 h)</div>${coverageBar(wd)}${gapsNote(wd)}</div>
+     <div class="label" style="margin-top:12px">Cobertura (24 h)</div>${coverageBar(wd,wk)}${gapsNote(wd,wk)}</div>
    <div class="card flush" style="margin-top:12px">${rows}</div>
    <div class="card" style="margin-top:12px"><div class="label">Añadir bloque</div>
      <div class="grid2">
@@ -834,13 +836,13 @@ function renderCfgHorario(){const wd=cfgHWd;const items=daySchedule(wd);
      <div class="field" id="cfgNameField" style="display:none"><label>Nombre del bloque</label><input class="input" id="cfgLabel" placeholder="Ej: recados, médico…"></div>
      <button class="btn teal" style="margin-top:10px" onclick="cfgAddBlock('${wd}')">Añadir</button>
    </div>`;toggleNameField("cfg");}
-function cfgDelBlock(wd,i){const it=daySchedule(wd)[i];S.schedule[wd]=(S.schedule[wd]||[]).filter(x=>x!==it);save();renderCfgHorario();}
+function cfgDelBlock(wd,i){const wk=curWeekKey();const w=schedWeek(wk);const it=daySchedule(wd,wk)[i];w[wd]=(w[wd]||[]).filter(x=>x!==it);save();renderCfgHorario();}
 function cfgAddBlock(wd){const start=val('cfgStart'),end=val('cfgEnd'),type=val('cfgType');
   const label=type==="other"?val('cfgLabel').trim():typeLabel(type);
   if(type==="other"&&!label){toast("Ponle un nombre al bloque");return;}
   if(!isHM(start)){toast("Pon la hora de inicio");return;}
   if(isHM(end)&&toMin(end)<=toMin(start)){toast("La hora de fin debe ser posterior");return;}
-  (S.schedule[wd]=S.schedule[wd]||[]).push({start,end:isHM(end)?end:"",label,type});save();renderCfgHorario();toast("Bloque añadido");}
+  (schedWeek(curWeekKey())[wd]=schedWeek(curWeekKey())[wd]||[]).push({start,end:isHM(end)?end:"",label,type});save();renderCfgHorario();toast("Bloque añadido");}
 /* ===== CONFIG · DIETA POR DÍA ===== */
 let cfgDWd=null;
 function openCfgDieta(){cfgDWd=todayKey();pageReturn=renderPerfil;document.getElementById("pageTitle").textContent="Cambiar dieta de un día";renderCfgDieta();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
@@ -1058,7 +1060,7 @@ document.getElementById("fImport").onchange=e=>{const f=e.target.files[0];if(!f)
   rd.onload=()=>{try{S=JSON.parse(rd.result);save();toast("Copia importada");renderPerfil();}catch(x){toast("Archivo no válido");}};rd.readAsText(f);};
 
 /* ---------- pesaje 21:00 ---------- */
-function weighDue(){return !S.dev && new Date().getHours()>=8 && S.lastWeigh!==isoToday();}
+function weighDue(){return !S.dev && new Date().getHours()>=6 && S.lastWeigh!==isoToday();}
 function checkWeigh(){const scrim=document.getElementById("weighScrim");
   if(!weighDue()){scrim.classList.remove("show");return;}
   const sn=S.weighSnooze;const now=Date.now();
@@ -1121,9 +1123,18 @@ function updateCountdown(){
 
 /* ---------- PLANIFICAR ---------- */
 let selWeekday=todayKey();
+function mondayOf(d){d=new Date(d);const off=(d.getDay()+6)%7;d.setDate(d.getDate()-off);d.setHours(0,0,0,0);return d;}
+function isoOf(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function curWeekKey(){return isoOf(mondayOf(new Date()));}
+function weekKeyPlus(n){const m=mondayOf(new Date());m.setDate(m.getDate()+7*n);return isoOf(m);}
+function weekKeyAdd(key,n){const m=new Date(key+"T00:00:00");m.setDate(m.getDate()+7*n);return isoOf(m);}
+function weekLabel(key){const a=new Date(key+"T00:00:00");const b=new Date(a);b.setDate(b.getDate()+6);const f=d=>pad(d.getDate())+"/"+pad(d.getMonth()+1);return f(a)+"–"+f(b);}
+function schedWeek(key){if(!S.weekSchedules[key]){S.weekSchedules[key]={};WD.forEach(wd=>S.weekSchedules[key][wd]=[]);}return S.weekSchedules[key];}
+function canEditWeek(key){return !!S.dev || key>curWeekKey();}
+let selSchedWeek=null;
 function blkStart(it){return it.start||it.time||"00:00";}
 function isHM(t){return /^\d\d?:\d\d$/.test(t||"");}
-function daySchedule(wd){return (S.schedule[wd]||[]).slice().sort((a,b)=>toMin(blkStart(a))-toMin(blkStart(b)));}
+function daySchedule(wd,key){const w=schedWeek(key||curWeekKey());return (w[wd]||[]).slice().sort((a,b)=>toMin(blkStart(a))-toMin(blkStart(b)));}
 function resolveEndMin(items,i){const it=items[i];if(isHM(it.end))return toMin(it.end);if(items[i+1])return toMin(blkStart(items[i+1]));return toMin(blkStart(it))+30;}
 function minHM(min){min=((Math.round(min)%1440)+1440)%1440;return pad(Math.floor(min/60))+":"+pad(min%60);}
 function fmtHMS(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return (h?h+":"+pad(m):m+"")+":"+pad(s);}
@@ -1173,60 +1184,66 @@ function renderPlanificar(){
           <div class="r-s" style="margin-top:4px">P ${m.P} · C ${m.C} · G ${m.F} g</div></div>
         <div class="num" style="font-weight:700;color:var(--ember)">${m.kt}<span style="font-size:11px;color:var(--muted)"> kcal</span></div></div>`;}).join("");
   } else wt.innerHTML='<div class="empty" style="padding:22px">Aún sin plan. Pulsa “Calcular y guardar plan” arriba.</div>';
-  renderSchedule(locked);
+  renderSchedule();
   toggleNameField("s");
 }
 let copySel=new Set();
-function renderSchedule(locked){
-  if(locked===undefined)locked=!planningUnlocked();
+function renderSchedule(){
+  if(!selSchedWeek)selSchedWeek=S.dev?curWeekKey():weekKeyPlus(1);
+  const wk=selSchedWeek;const locked=!canEditWeek(wk);
+  // selector de semana: actual + 4 siguientes
+  const weeks=[0,1,2,3,4].map(n=>weekKeyPlus(n));
+  const wkPills=weeks.map(k=>{const cur=k===curWeekKey();const ed=canEditWeek(k);
+    return `<button class="pill${k===wk?" on":""}" onclick="selSchedWeek='${k}';copySel=new Set();renderSchedule()">${cur?"Actual":weekLabel(k)}${!ed?" 🔒":""}</button>`;}).join("");
+  document.getElementById("schedWeekCard").innerHTML=`<div class="label">Semana a planificar</div><div class="pills">${wkPills}</div>
+    <div class="note" style="margin-top:8px">${wk===curWeekKey()?"Semana en curso "+weekLabel(wk):"Semana "+weekLabel(wk)}. ${locked?'<b style="color:var(--ember)">Bloqueada</b>: la semana actual solo se edita en Modo desarrollador. Planifica una semana siguiente.':"Editable."}</div>`;
   const wp=document.getElementById("wdPills");wp.innerHTML="";
   WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;copySel=new Set();renderSchedule();};wp.appendChild(b);});
-  document.getElementById("schedCoverage").innerHTML=coverageBar(selWeekday)+gapsNote(selWeekday);
-  const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday);
-  if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. '+(locked?'Edítalo el domingo o en Configuración.':'Añade un bloque abajo.')+'</div>';
+  document.getElementById("schedCoverage").innerHTML=coverageBar(selWeekday,wk)+gapsNote(selWeekday,wk);
+  const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday,wk);
+  if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. '+(locked?"Selecciona una semana siguiente para editar.":"Añade un bloque abajo.")+'</div>';
   items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 16px";
     const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
     r.innerHTML=`<div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(blockName(it))}</div></div>${typeTag(it.type)}${locked?"":'<button class="btn-del">×</button>'}`;
-    if(!locked){r.querySelector(".btn-del").onclick=()=>{S.schedule[selWeekday]=S.schedule[selWeekday].filter(x=>x!==it);save();renderSchedule();};}list.appendChild(r);});
-  // Replicar día + plantilla
+    if(!locked){r.querySelector(".btn-del").onclick=()=>{const w=schedWeek(wk);w[selWeekday]=(w[selWeekday]||[]).filter(x=>x!==it);save();renderSchedule();};}list.appendChild(r);});
   const tools=document.getElementById("schedTools");
   if(locked){tools.style.display="none";}
   else{tools.style.display="block";const others=WD.filter(d=>d!==selWeekday);
     tools.innerHTML=`<div class="label">Replicar ${WDLABEL_LONG[selWeekday]} a otros días</div>
       <div class="pills" id="copyPills" style="margin-bottom:10px"></div>
       <button class="btn sm teal" id="copyApply">Replicar a los marcados</button>
-      <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques (sobrescribe). Luego edita cada uno por separado.</div>`;
+      <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques de esta semana (sobrescribe).</div>`;
     const cp=document.getElementById("copyPills");
     others.forEach(d=>{const b=document.createElement("button");b.className="pill"+(copySel.has(d)?" on":"");b.textContent=WDLABEL[d];
       b.onclick=()=>{copySel.has(d)?copySel.delete(d):copySel.add(d);renderSchedule();};cp.appendChild(b);});
-    document.getElementById("copyApply").onclick=()=>{if(lockGuard())return;
+    document.getElementById("copyApply").onclick=()=>{
       if(!copySel.size){toast("Marca a qué días copiar");return;}
-      copySel.forEach(d=>{S.schedule[d]=JSON.parse(JSON.stringify(S.schedule[selWeekday]||[]));});
+      const w=schedWeek(wk);copySel.forEach(d=>{w[d]=JSON.parse(JSON.stringify(w[selWeekday]||[]));});
       const n=copySel.size;copySel=new Set();save();renderSchedule();toast(`Horario replicado a ${n} día${n>1?"s":""}`);};}
-  // Plantilla semana anterior
+  // Copiar de la semana anterior
   const tpl=document.getElementById("schedTemplate");
   if(locked){tpl.style.display="none";}
-  else{tpl.style.display="block";const has=!!S.scheduleTemplate;
-    tpl.innerHTML=`<div class="label">Plantilla de horario</div>
-      <div class="note" style="margin:4px 0 10px">Carga el horario de tu última semana guardada como base y ajústalo. ${has?"":"<b>Aún no hay plantilla</b> (se guarda al pulsar “Calcular y guardar plan”)."}</div>
-      <button class="btn sm" id="tplLoad" ${has?"":"disabled style=opacity:.5"}>Usar plantilla de la semana anterior</button>`;
-    if(has)document.getElementById("tplLoad").onclick=()=>{if(lockGuard())return;
-      if(!confirm("Esto sobrescribe el horario actual de los 7 días con la plantilla guardada. ¿Seguir?"))return;
-      S.schedule=JSON.parse(JSON.stringify(S.scheduleTemplate));save();renderSchedule();toast("Plantilla cargada");};}
+  else{tpl.style.display="block";const prev=weekKeyAdd(wk,-1);const prevW=S.weekSchedules[prev];
+    const hasPrev=prevW&&WD.some(d=>(prevW[d]||[]).length);
+    tpl.innerHTML=`<div class="label">Plantilla</div>
+      <div class="note" style="margin:4px 0 10px">Copia el horario de la semana anterior (${weekLabel(prev)}) como base y ajústalo. ${hasPrev?"":"<b>La semana anterior está vacía.</b>"}</div>
+      <button class="btn sm" id="tplLoad" ${hasPrev?"":"disabled style=opacity:.5"}>Copiar de la semana anterior</button>`;
+    if(hasPrev)document.getElementById("tplLoad").onclick=()=>{
+      if(!confirm("Esto sobrescribe el horario de los 7 días de esta semana con el de la semana anterior. ¿Seguir?"))return;
+      S.weekSchedules[wk]=JSON.parse(JSON.stringify(prevW));save();renderSchedule();toast("Horario copiado");};}
 }
 function savePlan(){if(lockGuard())return;const pw=planWeight();const g=+S.perfil.grasa,f=+S.perfil.factor;const days={};
-  S.scheduleTemplate=JSON.parse(JSON.stringify(S.schedule));
   WD.forEach(wd=>{const it=S.intensityByDay[wd];days[wd]={intensity:it,macros:dayMacros(pw.w,g,f,it)};});
   S.weekPlan={createdAt:isoToday(),weekStart:nextMondayISO(),planWeight:pw.w,planGrasa:g,factor:f,days};
   generateWeekDishes();
   S.lastPlan=isoToday();save();renderPlanificar();toast("Plan y platos de la semana guardados");}
 document.getElementById("savePlanBtn").onclick=savePlan;
-document.getElementById("sAdd").onclick=()=>{if(lockGuard())return;const start=document.getElementById("sStart").value,end=document.getElementById("sEnd").value,type=document.getElementById("sType").value;
+document.getElementById("sAdd").onclick=()=>{if(!canEditWeek(selSchedWeek)){toast("Esa semana está bloqueada · elige una semana siguiente");return;}const start=document.getElementById("sStart").value,end=document.getElementById("sEnd").value,type=document.getElementById("sType").value;
   const label=type==="other"?document.getElementById("sLabel").value.trim():typeLabel(type);
   if(type==="other"&&!label){toast("Ponle un nombre al bloque");return;}
   if(!isHM(start)){toast("Pon la hora de inicio");return;}
   if(isHM(end)&&toMin(end)<=toMin(start)){toast("La hora de fin debe ser posterior");return;}
-  (S.schedule[selWeekday]=S.schedule[selWeekday]||[]).push({start,end:isHM(end)?end:"",label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
+  const w=schedWeek(selSchedWeek);(w[selWeekday]=w[selWeekday]||[]).push({start,end:isHM(end)?end:"",label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
 
 /* ---------- COMIDA (semana -> día -> receta) ---------- */
 let comidaWd=null;
