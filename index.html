@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.8";
+const APP_VERSION="1.9";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -879,6 +879,19 @@ function _sel(label,key,opts,struct){const o=opts.map(([v,t])=>`<option value="$
 function _num(label,key,ph){return _fld(label,`<input class="input num" type="number" inputmode="decimal" placeholder="${ph||""}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
 function onTimeInput(el,key){let d=el.value.replace(/\D/g,"").slice(0,5);let v=d;if(d.length>=3)v=d.slice(0,-2)+":"+d.slice(-2);el.value=v;tf[key]=v;}
 function _time(label,key,ph){return _fld(label,`<input class="input num" type="text" inputmode="numeric" placeholder="${ph||"mm:ss"}" value="${tf[key]||""}" oninput="onTimeInput(this,'${key}')">`);}
+function tfPick(key,m,s){const cur=parseClock(tf[key])||0;let mm=Math.floor(cur/60),ss=cur%60;if(m!=null)mm=+m;if(s!=null)ss=+s;tf[key]=mm+":"+pad(ss);}
+function _pick(label,key,maxMin,defMin){
+  const cur=parseClock(tf[key]);let mm,ss;
+  if(cur!=null){mm=Math.floor(cur/60);ss=cur%60;}else{mm=defMin;ss=0;}
+  if(mm>maxMin)maxMin=mm;
+  if(tf[key]==null||tf[key]==="")tf[key]=mm+":"+pad(ss);
+  let mO="";for(let i=0;i<=maxMin;i++)mO+=`<option value="${i}"${i===mm?" selected":""}>${i}</option>`;
+  let sO="";for(let i=0;i<60;i++)sO+=`<option value="${i}"${i===ss?" selected":""}>${pad(i)}</option>`;
+  return _fld(label,`<div style="display:flex;gap:8px;align-items:center">
+    <select class="input" style="flex:1;text-align:center" onchange="tfPick('${key}',this.value,null)">${mO}</select>
+    <span class="r-s" style="color:var(--muted)">min</span>
+    <select class="input" style="flex:1;text-align:center" onchange="tfPick('${key}',null,this.value)">${sO}</select>
+    <span class="r-s" style="color:var(--muted)">seg</span></div>`);}
 const _blkOpts=[...Array(8)].map((_,i)=>[String(i+1),String(i+1)]);
 let tfBlocking=false;
 function openTrainForm(opts){tf={type:""};tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;tfBlocking=!!(opts&&opts.blocking);
@@ -912,29 +925,29 @@ function renderTrainForm(){
 function ergFields(water){
   let h="";
   if(water)h+=_sel("Bote","bote",[["1x","1x"],["2x","2x"],["2-","2-"],["4x","4x"],["4+","4+"],["4-","4-"],["8+","8+"]],false);
-  h+=_num("Distancia total (m)","distTotal","m")+_time("Tiempo total","timeTotal","mm:ss");
+  h+=_num("Distancia total (m)","distTotal","m")+_pick("Tiempo total","timeTotal",240,60);
   h+=_sel("Tipo de sesión","ergTipo",[["rodaje","Rodaje"],["series","Series"],["test","Test"]],true);
   if(tf.ergTipo==="rodaje"){
-    if(!water)h+=_time("Parcial del rodaje (/500 m)","parcial","mm:ss");
+    if(!water)h+=_pick("Parcial del rodaje (/500 m)","parcial",9,0);
   } else if(tf.ergTipo==="test"){
-    h+=_sel("Distancia del test","testDist",[["500","500 m"],["1000","1000 m"],["2000","2000 m"],["6000","6000 m"]],false)+_time("Tiempo del test","testTime","mm:ss");
+    h+=_sel("Distancia del test","testDist",[["500","500 m"],["1000","1000 m"],["2000","2000 m"],["6000","6000 m"]],false)+_pick("Tiempo del test","testTime",90,0);
   } else if(tf.ergTipo==="series"){
     h+=_sel("Tipo de series","ergSerieTipo",[["tiempo","Series de tiempo"],["distancia","Series de distancia"],["piramides","Pirámides"],["intervalos","Intervalos"]],true);
     const st=tf.ergSerieTipo;
     if(st==="tiempo"||st==="distancia"){
-      h+=(st==="tiempo"?_time("Tiempo de cada serie","tSerie","mm:ss"):_num("Distancia de cada serie (m)","dSerie","m"));
-      h+=_time("Descanso entre series","tDesc","mm:ss")+_num("Nº de series","nSeries","");
+      h+=(st==="tiempo"?_pick("Tiempo de cada serie","tSerie",30,0):_num("Distancia de cada serie (m)","dSerie","m"));
+      h+=_pick("Descanso entre series","tDesc",20,0)+_num("Nº de series","nSeries","");
       h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
-      if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
-      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
+      if(+tf.nBloques>1)h+=_pick("Descanso entre bloques","descBloques",30,0);
+      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
     } else if(st==="intervalos"){
       h+=_num("Paladas fuertes","palFuertes","")+_num("Paladas suaves","palSuaves","")+_num("Nº de series","nSeries","");
       h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
-      if(+tf.nBloques>1)h+=_time("Descanso entre bloques","descBloques","mm:ss");
-      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
+      if(+tf.nBloques>1)h+=_pick("Descanso entre bloques","descBloques",30,0);
+      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
     } else if(st==="piramides"){
       h+=_fld("Explica la pirámide",`<textarea class="input" rows="3" oninput="tf['piramTexto']=this.value">${esc(tf.piramTexto||"")}</textarea>`);
-      if(!water)h+=_time("Parcial medio (/500 m)","parcial","mm:ss");
+      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
     }
   }
   return h;
