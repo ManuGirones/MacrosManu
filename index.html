@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.9";
+const APP_VERSION="2.0";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -800,7 +800,7 @@ function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title
   document.getElementById("pageBody").innerHTML=body;
   document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 let pageReturn=renderPerfil;
-function closePage(){document.getElementById("page").classList.remove("show");document.getElementById("pageBack").style.display="flex";if(pageReturn)pageReturn();}
+function closePage(){statsActive=false;document.getElementById("page").classList.remove("show");const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Perfil";if(pageReturn)pageReturn();}
 function val(id){return document.getElementById(id).value;}
 let curView="perfil";
 /* ===== BLOQUEO · DOMINGO · DEV ===== */
@@ -998,47 +998,71 @@ function ergDetail(l){const d=l.distTotal?l.distTotal+" m":"";
   if(st==="intervalos")return `Intervalos · ${l.palFuertes||"?"}f/${l.palSuaves||"?"}s ×${l.nSeries||"?"}`+bl;
   if(st==="piramides")return "Pirámide";
   return "Series";}
-function openStats(){statsPeriod="total";pageReturn=renderPerfil;document.getElementById("pageBack").style.display="flex";document.getElementById("pageTitle").textContent="Resumen de entrenamientos";renderStats();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+let statsActive=false;
+let statsStack=[{v:"home"}];
+const STATS_TYPES=[["agua","Agua"],["erg","Ergómetro"],["pesas","Pesas"],["bici","Bici"],["correr","Correr"]];
+const STATS_EMPTY='<div class="empty" style="padding:30px">Sin datos en este periodo.</div>';
+function openStats(){statsPeriod="total";statsStack=[{v:"home"}];statsActive=true;pageReturn=renderPerfil;document.getElementById("pageBack").style.display="flex";renderStats();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function statsGo(v,p){statsStack.push({v:v,p:p});renderStats();window.scrollTo(0,0);}
+function statsBack(){statsStack.pop();if(!statsStack.length){statsActive=false;closePage();return;}renderStats();window.scrollTo(0,0);}
+function pageBackTap(){if(statsActive&&document.getElementById("page").classList.contains("show")&&statsStack.length>1){statsBack();}else{statsActive=false;closePage();}}
+function drillRow(title,sub,go){return `<div class="row" style="padding:13px 16px" onclick="${go}"><div class="grow"><div class="r-t">${title}</div>${sub?`<div class="r-s" style="color:var(--faint)">${sub}</div>`:""}</div><div style="color:var(--faint);font-size:20px;padding-left:8px">›</div></div>`;}
+function statsPills(){const periods=[["total","Total"],["ano","Año"],["t3","3 meses"],["mes","Mes"],["semana","Semana"],["hoy","Hoy"]];
+  return `<div class="card"><div class="label">Periodo</div><div class="pills">`+periods.map(([k,t])=>`<button class="pill${statsPeriod===k?" on":""}" onclick="statsPeriod='${k}';renderStats()">${t}</button>`).join("")+`</div></div>`;}
 function renderStats(){
-  const periods=[["total","Total"],["ano","Año"],["t3","3 meses"],["mes","Mes"],["semana","Semana"],["hoy","Hoy"]];
-  const pills=periods.map(([k,t])=>`<button class="pill${statsPeriod===k?" on":""}" onclick="statsPeriod='${k}';renderStats()">${t}</button>`).join("");
+  const top=statsStack[statsStack.length-1];
   const L=S.trainings.filter(l=>inPeriod(l.date,statsPeriod));
   const by=t=>L.filter(l=>l.type===t);
-  const correr=by("correr"),bici=by("bici"),pesas=by("pesas"),erg=by("erg"),agua=by("agua");
-  let h=`<div class="card"><div class="label">Periodo</div><div class="pills">${pills}</div></div>`;
-  const totMin=L.reduce((a,l)=>a+_n(l.min)*60+_secs(l.timeTotal),0);
-  h+=shead("General")+`<div class="card flush">`+srow("Entrenos totales",L.length)+srow("Tiempo total entrenado",durFmt(totMin))+
-    srow("Agua",agua.length)+srow("Ergómetro",erg.length)+srow("Pesas",pesas.length)+srow("Bici",bici.length)+srow("Correr",correr.length)+`</div>`;
-  if(correr.length){const km=correr.reduce((a,l)=>a+_n(l.km),0),min=correr.reduce((a,l)=>a+_n(l.min),0);
-    h+=shead("Correr")+`<div class="card flush">`+srow("Entrenos",correr.length)+srow("En cinta",correr.filter(l=>l.correrModo==="cinta").length)+srow("Libre",correr.filter(l=>l.correrModo==="libre").length)+
-      srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",correr.filter(l=>l.entreno==="series").length)+srow("Fondo",correr.filter(l=>l.entreno==="fondo").length)+`</div>`;}
-  if(bici.length){const km=bici.reduce((a,l)=>a+_n(l.km),0),min=bici.reduce((a,l)=>a+_n(l.min),0);
-    h+=shead("Bici")+`<div class="card flush">`+srow("Entrenos",bici.length)+srow("Estática",bici.filter(l=>l.biciModo==="estatica").length)+srow("Carretera",bici.filter(l=>l.biciModo==="carretera").length)+srow("BTT",bici.filter(l=>l.biciModo==="btt").length)+
-      srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",bici.filter(l=>l.entreno==="series").length)+srow("Fondo",bici.filter(l=>l.entreno==="fondo").length)+`</div>`;}
-  if(pesas.length){const fat=pesas.map(l=>_n(l.fatiga)).filter(x=>x>0),favg=fat.length?fat.reduce((a,b)=>a+b,0)/fat.length:0;
-    h+=shead("Pesas")+`<div class="card flush">`+srow("Entrenos",pesas.length)+srow("Potencia",pesas.filter(l=>l.pesasTipo==="potencia").length)+srow("Resistencia",pesas.filter(l=>l.pesasTipo==="resistencia").length)+
-      srow("Fatiga media",favg?fmt(favg,1)+"/10":"—")+`</div>`;}
-  if(erg.length){const dist=erg.reduce((a,l)=>a+_n(l.distTotal),0),tsec=erg.reduce((a,l)=>a+_secs(l.timeTotal),0),ser=erg.filter(l=>l.ergTipo==="series");
-    h+=shead("Ergómetro")+`<div class="card flush">`+srow("Entrenos",erg.length)+srow("Rodajes",erg.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",ser.length)+srow("Tests",erg.filter(l=>l.ergTipo==="test").length)+
-      srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+
-      srow("Series de tiempo",ser.filter(l=>l.ergSerieTipo==="tiempo").length)+srow("Series de distancia",ser.filter(l=>l.ergSerieTipo==="distancia").length)+srow("Intervalos",ser.filter(l=>l.ergSerieTipo==="intervalos").length)+srow("Pirámides",ser.filter(l=>l.ergSerieTipo==="piramides").length)+`</div>`;
-    const list=erg.filter(l=>l.ergTipo==="rodaje"||l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
-    if(list.length)h+=`<div class="label" style="margin:14px 2px 6px">Rodajes y series · cronológico (parcial /500 m)</div><div class="card flush">`+
-      list.map(l=>`<div class="row" style="padding:9px 16px"><div class="grow"><div class="r-t">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${esc(l.parcial||"—")}</div></div>`).join("")+`</div>`;}
-  if(agua.length){const dist=agua.reduce((a,l)=>a+_n(l.distTotal),0),tsec=agua.reduce((a,l)=>a+_secs(l.timeTotal),0);
-    h+=shead("Agua")+`<div class="card flush">`+srow("Salidas",agua.length)+srow("Rodajes",agua.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",agua.filter(l=>l.ergTipo==="series").length)+srow("Tests",agua.filter(l=>l.ergTipo==="test").length)+
-      srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+`</div>`;
-    const boats=["1x","2x","2-","4x","4+","4-","8+"];
-    const boatRows=boats.map(b=>{const bl=agua.filter(l=>l.bote===b);if(!bl.length)return "";const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0),sc=bl.filter(l=>l.ergTipo==="series").length;
-      return `<div class="row" style="padding:9px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${b}</div><div class="grow r-s">${fmt(d/1000,1)} km · ${durFmt(ts)} · ${sc} series</div><div class="r-s" style="color:var(--faint)">${bl.length} sal.</div></div>`;}).join("");
-    h+=`<div class="label" style="margin:14px 2px 6px">Por tipo de barco</div><div class="card flush">`+(boatRows||'<div class="note" style="padding:14px">Sin barco indicado.</div>')+`</div>`;
-    const aser=agua.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
-    if(aser.length)h+=`<div class="label" style="margin:14px 2px 6px">Series en agua (sin parcial)</div><div class="card flush">`+
-      aser.map(l=>`<div class="row" style="padding:9px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${esc(l.bote||"?")}</div><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
-  if(!L.length)h+=`<div class="empty" style="padding:30px">Sin entrenos en este periodo.</div>`;
+  document.getElementById("pageBack").textContent=statsStack.length>1?"‹ Volver":"‹ Perfil";
+  let title="Resumen de entrenamientos";let h=statsPills();
+  if(top.v==="home"){
+    const totMin=L.reduce((a,l)=>a+_n(l.min)*60+_secs(l.timeTotal),0);
+    h+=shead("General")+`<div class="card flush">`+srow("Entrenos totales",L.length)+srow("Tiempo total",durFmt(totMin))+`</div>`;
+    h+=`<div class="label" style="margin:14px 2px 6px">Por tipo · toca para ver detalle</div><div class="card flush">`+
+      STATS_TYPES.map(([k,lab])=>{const n=by(k).length;return drillRow(lab,n+" entreno"+(n===1?"":"s"),`statsGo('type','${k}')`);}).join("")+`</div>`;
+  } else if(top.v==="type"){title=STATS_TYPES.find(x=>x[0]===top.p)[1];h+=renderStatsType(top.p,by(top.p));}
+  else if(top.v==="ergList"){title="Rodajes y series";h+=renderErgList(by("erg"));}
+  else if(top.v==="ergTests"){title="Tests de ergómetro";h+=renderTests(by("erg"));}
+  else if(top.v==="aguaBoats"){title="Por tipo de barco";h+=renderAguaBoats(by("agua"));}
+  else if(top.v==="aguaBoat"){title="Barco "+top.p;h+=renderAguaBoat(by("agua"),top.p);}
+  else if(top.v==="aguaSeries"){title="Series en agua";h+=renderAguaSeries(by("agua"));}
+  document.getElementById("pageTitle").textContent=title;
   document.getElementById("pageBody").innerHTML=h;
 }
-document.getElementById("pageBack").onclick=closePage;
+function renderStatsType(t,A){
+  if(!A.length)return STATS_EMPTY;
+  if(t==="correr"){const km=A.reduce((a,l)=>a+_n(l.km),0),min=A.reduce((a,l)=>a+_n(l.min),0);
+    return `<div class="card flush">`+srow("Entrenos",A.length)+srow("En cinta",A.filter(l=>l.correrModo==="cinta").length)+srow("Libre",A.filter(l=>l.correrModo==="libre").length)+srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",A.filter(l=>l.entreno==="series").length)+srow("Fondo",A.filter(l=>l.entreno==="fondo").length)+`</div>`;}
+  if(t==="bici"){const km=A.reduce((a,l)=>a+_n(l.km),0),min=A.reduce((a,l)=>a+_n(l.min),0);
+    return `<div class="card flush">`+srow("Entrenos",A.length)+srow("Estática",A.filter(l=>l.biciModo==="estatica").length)+srow("Carretera",A.filter(l=>l.biciModo==="carretera").length)+srow("BTT",A.filter(l=>l.biciModo==="btt").length)+srow("Km totales",fmt(km,1))+srow("Minutos totales",Math.round(min))+srow("Series",A.filter(l=>l.entreno==="series").length)+srow("Fondo",A.filter(l=>l.entreno==="fondo").length)+`</div>`;}
+  if(t==="pesas"){const fat=A.map(l=>_n(l.fatiga)).filter(x=>x>0),favg=fat.length?fat.reduce((a,b)=>a+b,0)/fat.length:0;
+    return `<div class="card flush">`+srow("Entrenos",A.length)+srow("Potencia",A.filter(l=>l.pesasTipo==="potencia").length)+srow("Resistencia",A.filter(l=>l.pesasTipo==="resistencia").length)+srow("Fatiga media",favg?fmt(favg,1)+"/10":"—")+`</div>`;}
+  if(t==="erg"){const dist=A.reduce((a,l)=>a+_n(l.distTotal),0),tsec=A.reduce((a,l)=>a+_secs(l.timeTotal),0),ser=A.filter(l=>l.ergTipo==="series");const nlist=A.filter(l=>l.ergTipo==="rodaje"||l.ergTipo==="series").length,ntest=A.filter(l=>l.ergTipo==="test").length;
+    return `<div class="card flush">`+srow("Entrenos",A.length)+srow("Rodajes",A.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",ser.length)+srow("Tests",ntest)+srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+srow("Series de tiempo",ser.filter(l=>l.ergSerieTipo==="tiempo").length)+srow("Series de distancia",ser.filter(l=>l.ergSerieTipo==="distancia").length)+srow("Intervalos",ser.filter(l=>l.ergSerieTipo==="intervalos").length)+srow("Pirámides",ser.filter(l=>l.ergSerieTipo==="piramides").length)+`</div>`
+      +`<div class="label" style="margin:14px 2px 6px">Más detalle</div><div class="card flush">`+drillRow("Rodajes y series",nlist+" · cronológico con parcial","statsGo('ergList')")+drillRow("Tests",ntest+" registrados","statsGo('ergTests')")+`</div>`;}
+  if(t==="agua"){const dist=A.reduce((a,l)=>a+_n(l.distTotal),0),tsec=A.reduce((a,l)=>a+_secs(l.timeTotal),0);
+    return `<div class="card flush">`+srow("Salidas",A.length)+srow("Rodajes",A.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",A.filter(l=>l.ergTipo==="series").length)+srow("Tests",A.filter(l=>l.ergTipo==="test").length)+srow("Distancia total",fmt(dist/1000,1)+" km")+srow("Tiempo total",durFmt(tsec))+`</div>`
+      +`<div class="label" style="margin:14px 2px 6px">Más detalle</div><div class="card flush">`+drillRow("Por tipo de barco","km, tiempo y series por barco","statsGo('aguaBoats')")+drillRow("Series en agua",A.filter(l=>l.ergTipo==="series").length+" series","statsGo('aguaSeries')")+`</div>`;}
+  return "";}
+function renderErgList(A){const list=A.filter(l=>l.ergTipo==="rodaje"||l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
+  if(!list.length)return STATS_EMPTY;
+  return `<div class="card flush">`+list.map(l=>`<div class="row" style="padding:11px 16px"><div class="grow"><div class="r-t">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${esc(l.parcial||"—")}</div></div>`).join("")+`</div>`;}
+function renderTests(A){const t=A.filter(l=>l.ergTipo==="test").sort((a,b)=>a.ts-b.ts);
+  if(!t.length)return STATS_EMPTY;
+  return `<div class="card flush">`+t.map(l=>`<div class="row" style="padding:11px 16px"><div class="r-t" style="flex:0 0 70px">${esc(l.testDist||"?")} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${esc(l.testTime||"—")}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
+function renderAguaBoats(A){const boats=["1x","2x","2-","4x","4+","4-","8+"];
+  const rows=boats.map(b=>{const bl=A.filter(l=>l.bote===b);if(!bl.length)return "";const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0);
+    return drillRow(b,fmt(d/1000,1)+" km · "+durFmt(ts)+" · "+bl.length+" salidas","statsGo('aguaBoat','"+b+"')");}).join("");
+  return `<div class="card flush">`+(rows||STATS_EMPTY)+`</div>`;}
+function renderAguaBoat(A,b){const bl=A.filter(l=>l.bote===b);if(!bl.length)return STATS_EMPTY;const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0);
+  let h=`<div class="card flush">`+srow("Salidas",bl.length)+srow("Distancia total",fmt(d/1000,1)+" km")+srow("Tiempo total",durFmt(ts))+srow("Rodajes",bl.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",bl.filter(l=>l.ergTipo==="series").length)+srow("Tests",bl.filter(l=>l.ergTipo==="test").length)+`</div>`;
+  const ser=bl.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
+  if(ser.length)h+=`<div class="label" style="margin:14px 2px 6px">Series (sin parcial)</div><div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px"><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;
+  return h;}
+function renderAguaSeries(A){const ser=A.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
+  if(!ser.length)return STATS_EMPTY;
+  return `<div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${esc(l.bote||"?")}</div><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
+document.getElementById("pageBack").onclick=pageBackTap;
 function savePageField(field,inputId,k){const v=parseFloat(document.getElementById(inputId).value);
   if(isNaN(v)){toast("Valor no válido");return;}S.perfil[field]=v;
   if(field==="peso"||field==="grasa")upsertMetric({[field]:v});save();openPage(k);toast("Recalculado");}
