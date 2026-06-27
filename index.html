@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="1.7";
+const APP_VERSION="1.8";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -877,7 +877,8 @@ function _fld(label,inner){return `<div class="field"><label>${label}</label>${i
 function _sel(label,key,opts,struct){const o=opts.map(([v,t])=>`<option value="${v}"${tf[key]===v?" selected":""}>${t}</option>`).join("");
   return _fld(label,`<select class="input" onchange="${struct?`tfSet('${key}',this.value)`:`tf['${key}']=this.value`}"><option value="">—</option>${o}</select>`);}
 function _num(label,key,ph){return _fld(label,`<input class="input num" type="number" inputmode="decimal" placeholder="${ph||""}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
-function _time(label,key,ph){return _fld(label,`<input class="input num" type="text" inputmode="numeric" placeholder="${ph||"mm:ss"}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
+function onTimeInput(el,key){let d=el.value.replace(/\D/g,"").slice(0,5);let v=d;if(d.length>=3)v=d.slice(0,-2)+":"+d.slice(-2);el.value=v;tf[key]=v;}
+function _time(label,key,ph){return _fld(label,`<input class="input num" type="text" inputmode="numeric" placeholder="${ph||"mm:ss"}" value="${tf[key]||""}" oninput="onTimeInput(this,'${key}')">`);}
 const _blkOpts=[...Array(8)].map((_,i)=>[String(i+1),String(i+1)]);
 let tfBlocking=false;
 function openTrainForm(opts){tf={type:""};tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;tfBlocking=!!(opts&&opts.blocking);
