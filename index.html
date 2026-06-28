@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="2.1";
+const APP_VERSION="2.6";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -337,6 +337,7 @@ const ENGINE={factorBase:1.45,protGkg:2.0,kcalP:4,kcalC:4,kcalF:9,
  }};
 const INTENS=["descanso","suave","moderado","intenso","competicion"];
 const lean=(p,g)=>p*(1-g/100), tmbKatch=m=>370+21.6*m, getBase=(p,g,f)=>tmbKatch(lean(p,g))*f;
+const ceilW=p=>Math.min(95,Math.max(75,Math.ceil((+p||0)-1e-9)));
 function dayMacros(p,g,f,key){const d=ENGINE.dayTypes[key],ke=d.min*d.kpm,kt=getBase(p,g,f)+ke;
   const P=ENGINE.protGkg*p,C=d.carbGkg*p,F=(kt-P*ENGINE.kcalP-C*ENGINE.kcalC)/ENGINE.kcalF;
   return {kt:Math.round(kt),P:Math.round(P),C:Math.round(C),F:Math.round(F)};}
@@ -410,10 +411,10 @@ function buildSteps(){const o={};INTENS.forEach(it=>{o[it]={};MEALKEYS.forEach(m
 const RECIPE_NAME={desayuno:"Overnight oats",media:"Bowl de skyr",comida:"Pollo + arroz + verdura",merienda:"Batido de avena",cena:"Merluza + patata"};
 const UNIT_PLURAL={"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"],"huevo":["huevo","huevos"]};
 // ingredientes base a 81,5 kg. t: "g"(def)/"ml"/"u"(unidad fija). u: gramos por unidad.
-const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],boniato:[90,1.6,20,0.1],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],bacalao:[105,23,0,1],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],alubias:[120,8,22,0.5],tomate:[80,1.5,9,4],espinacas:[23,3,1,0.4],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
-const RAWF={arroz:0.37,pasta:0.42,patata:1.05,boniato:1.05,pollo:1.43,pavo:1.43,ternera:1.4,salmon:1.25,merluza:1.25,bacalao:1.25,cerdo:1.4};
-const FLOORG={pollo:70,pavo:70,ternera:80,merluza:95,bacalao:95,salmon:95,cerdo:80,atun:80,huevo:150};
-const FOODNAME={arroz:"arroz cocido",pasta:"pasta cocida",patata:"patata cocida",boniato:"boniato",pollo:"pollo (cocido)",pavo:"pavo (cocido)",ternera:"ternera magra (cocida)",salmon:"salmón (cocido)",merluza:"merluza (cocida)",bacalao:"bacalao (cocido)",cerdo:"lomo de cerdo (cocido)",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas cocidas",garbanzos:"garbanzos cocidos",alubias:"alubias cocidas",tomate:"tomate/sofrito",espinacas:"espinacas",verdura:"verdura"};
+const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],boniato:[90,1.6,20,0.1],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],tomate:[80,1.5,9,4],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
+const RAWF={arroz:0.37,pasta:0.42,patata:1.05,boniato:1.05,pollo:1.43,pavo:1.43,ternera:1.4,salmon:1.25,merluza:1.25,cerdo:1.4};
+const FLOORG={pollo:70,pavo:70,ternera:80,merluza:95,salmon:95,cerdo:80,atun:80,huevo:150,lentejas:200,garbanzos:180};
+const FOODNAME={arroz:"arroz cocido",pasta:"pasta cocida",patata:"patata cocida",boniato:"boniato",pollo:"pollo (cocido)",pavo:"pavo (cocido)",ternera:"ternera magra (cocida)",salmon:"salmón (cocido)",merluza:"merluza (cocida)",cerdo:"lomo de cerdo (cocido)",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas cocidas",garbanzos:"garbanzos cocidos",tomate:"tomate/sofrito",verdura:"verdura"};
 // Biblioteca de 16 platos. prot/carb = clave FOOD; extra fijo; tags cuotas; cons conservación; comodin sale más
 const LIBRARY=[
  {id:1,name:"Pollo con arroz y verdura",prot:"pollo",carb:"arroz",extra:[],tags:[],cons:["N3","CONG"],comodin:true},
@@ -430,8 +431,8 @@ const LIBRARY=[
  {id:12,name:"Merluza con patata y verdura",prot:"merluza",carb:"patata",extra:[],tags:["pescado"],cons:["CONG"],comodin:false},
  {id:13,name:"Atún con pasta y verdura",prot:"atun",carb:"pasta",extra:[],tags:["pescado"],cons:["N3"],comodin:false},
  {id:14,name:"Atún con arroz y verdura",prot:"atun",carb:"arroz",extra:[],tags:["pescado"],cons:["N3"],comodin:true},
- {id:15,name:"Lentejas con huevo, arroz y verdura",prot:null,carb:"arroz",extra:[["lentejas",220],["huevo",50]],tags:["legumbre","huevo"],cons:["N3","CONG"],comodin:true},
- {id:16,name:"Garbanzos con huevo, arroz y verdura",prot:null,carb:"arroz",extra:[["garbanzos",200],["huevo",50]],tags:["legumbre","huevo"],cons:["N3","CONG"],comodin:false},
+ {id:15,name:"Lentejas con huevo, arroz y verdura",prot:"lentejas",carb:"arroz",extra:[["huevo",50]],tags:["legumbre","huevo"],cons:["N3","CONG"],comodin:true},
+ {id:16,name:"Garbanzos con huevo, arroz y verdura",prot:"garbanzos",carb:"arroz",extra:[["huevo",50]],tags:["legumbre","huevo"],cons:["N3","CONG"],comodin:false},
  {id:17,name:"Huevo con patata y verdura",prot:"huevo",carb:"patata",extra:[],tags:["huevo"],cons:["N3"],comodin:false}
 ];
 function consText(d){
@@ -513,9 +514,12 @@ function computeDishItems(did,wd,slot){const d=dishById(did);if(!d)return [];con
   push("verdura","verdura",150);acc("verdura",150);
   d.extra.forEach(([k,g])=>{const nm=(k==="huevo")?"huevo":FOODNAME[k]||k;if(k==="huevo"){push(nm,k,g,"u",50);}else push(nm,k,g);acc(k,g);});
   push(fr.n,fr.k,fr.g,"u",fr.u);acc(fr.k,fr.g);
-  let cg=Math.max(0,(tgt.C-C)/(FOOD[d.carb][2]/100));cg=ceilTo(cg,5);push(FOODNAME[d.carb],d.carb,cg);acc(d.carb,cg);
+  let protItem=null;
   if(d.prot){let pg=(tgt.P-P)/(FOOD[d.prot][1]/100);pg=Math.max(FLOORG[d.prot]||60,pg);
-    if(d.prot==="huevo"){pg=ceilTo(pg,50);push("huevo","huevo",pg,"u",50);}else{pg=ceilTo(pg,5);push(FOODNAME[d.prot],d.prot,pg);}acc(d.prot,pg);}
+    if(d.prot==="huevo"){pg=ceilTo(pg,50);protItem=["huevo","huevo",pg,"u",50];}else{pg=ceilTo(pg,5);protItem=[FOODNAME[d.prot],d.prot,pg];}
+    acc(d.prot,pg);}
+  let cg=Math.max(0,(tgt.C-C)/(FOOD[d.carb][2]/100));cg=ceilTo(cg,5);push(FOODNAME[d.carb],d.carb,cg);acc(d.carb,cg);
+  if(protItem){if(protItem.length>3)push(protItem[0],protItem[1],protItem[2],protItem[3],protItem[4]);else push(protItem[0],protItem[1],protItem[2]);}
   let ac=Math.max(0,tgt.F-Fz);if(ac>=3){ac=ceilTo(ac,1);push("aceite","aceite",ac);}
   return items;}
 function mealItems(wd,mk,sf){if(mk==="comida"||mk==="cena")return computeDishItems(assignedDish(wd,mk),wd,mk);
@@ -526,6 +530,7 @@ function assignedDish(wd,mk){if(!S.weekDishes||S.dishesWeekKey!==curWeekKey()||!
 const QUOTAS={pescado:3,azul:1,legumbre:2,carneroja:1,huevo:1};
 const CONSDAY={mon:["FRESCO","N3","CONG"],tue:["FRESCO","N3","CONG"],wed:["N3","CONG"],thu:["CONG"],fri:["CONG"],sat:["CONG"],sun:["CONG"]};
 function dishAllowed(d,wd,it){if(!d.cons.some(c=>CONSDAY[wd].includes(c)))return false;
+  if(it==="descanso"&&d.tags.includes("legumbre"))return false;
   if(it==="competicion"){if(!["arroz","pasta"].includes(d.carb))return false;if(d.tags.includes("legumbre"))return false;if(["salmon"].includes(d.prot))return false;}
   return true;}
 function buildWeekOnce(intens){
@@ -588,7 +593,6 @@ function migrate(s){
   if(!s.bestMarks)s.bestMarks=JSON.parse(JSON.stringify(d.bestMarks));else ["500","1000","2000","6000"].forEach(k=>{if(!(k in s.bestMarks))s.bestMarks[k]=null;});
   if(!s.trainDone)s.trainDone={};
   if(!s.trainSnooze)s.trainSnooze={};
-  if(!("scheduleTemplate" in s))s.scheduleTemplate=null;
   if(!s.v11clean){WD.forEach(wd=>{if(Array.isArray(s.schedule[wd]))s.schedule[wd]=s.schedule[wd].filter(b=>b.label!=="Entreno agua"&&b.label!=="Entreno tarde");});s.v11clean=true;}
   WD.forEach(wd=>{(s.schedule[wd]||[]).forEach(b=>{if(!b.start&&b.time)b.start=b.time;if(!("end" in b))b.end="";delete b.time;});});
   if(!s.meals)s.meals={};
@@ -690,7 +694,7 @@ document.getElementById("scrim").onclick=closeSheet;document.getElementById("she
 
 /* ---------- PERFIL ---------- */
 function profileMetrics(){
-  const p=S.perfil,n=num(p);const tmb=tmbKatch(lean(n.peso,n.grasa)),gb=getBase(n.peso,n.grasa,n.factor);
+  const p=S.perfil,n=num(p);const cw=ceilW(n.peso);const tmb=tmbKatch(lean(cw,n.grasa)),gb=getBase(cw,n.grasa,n.factor);
   return [
     {key:"sexo",name:"Sexo",prev:p.sexo},
     {key:"edad",name:"Edad",prev:ageFrom(p.nacimiento)+" años"},
@@ -761,8 +765,9 @@ function trendChip(arr,unit,dec){if(arr.length<2)return `<span class="trendchip 
 
 /* ---------- página completa de métrica ---------- */
 function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title="",body="";
-  const kcHoy=dayMacros(n.peso,n.grasa,n.factor,curType()).kt;
-  if(k==="peso"){const arr=arrRaw("peso"),tmb=tmbKatch(lean(n.peso,n.grasa)),gb=getBase(n.peso,n.grasa,n.factor);
+  const cw=ceilW(n.peso);
+  const kcHoy=dayMacros(cw,n.grasa,n.factor,curType()).kt;
+  if(k==="peso"){const arr=arrRaw("peso"),tmb=tmbKatch(lean(cw,n.grasa)),gb=getBase(cw,n.grasa,n.factor);
     title="Peso";body=`<div class="hero-val num">${fmt(n.peso)}<span class="un">kg</span></div>${trendChip(arr,"kg",1)}
       <div class="chartbox">${chartArr(arr,"var(--ember)")}</div>${statsPage(arr,"kg",1)}
       <div class="page-sec">Recalcula al instante</div>
@@ -791,15 +796,15 @@ function openPage(k){pageReturn=renderPerfil;const p=S.perfil,n=num(p);let title
       <div class="note" style="margin-top:12px">El IMC se calcula con tu peso actual (${fmt(n.peso)} kg). Tu TMB usa la masa magra (Katch-McArdle), así que la altura no lo cambia; sí cambia el IMC.</div>
       <div class="field" style="margin-top:14px"><label>Editar altura (cm)</label><input class="input num" id="edAltura" type="number" inputmode="decimal" step="0.1" value="${n.altura}"></div>
       <button class="btn primary" onclick="savePageField('altura','edAltura','altura')">Guardar</button>`;
-  } else if(k==="tmb"){const arr=arrTmb(),lm=lean(n.peso,n.grasa),tmb=tmbKatch(lm),gb=getBase(n.peso,n.grasa,n.factor);
+  } else if(k==="tmb"){const arr=arrTmb(),lm=lean(cw,n.grasa),tmb=tmbKatch(lm),gb=getBase(cw,n.grasa,n.factor);
     title="Metabolismo basal";body=`<div class="hero-val num">${Math.round(tmb)}<span class="un">kcal</span></div>${trendChip(arr,"kcal",0)}
       <div class="chartbox">${chartArr(arr,"var(--teal)")}</div>${statsPage(arr,"kcal",0)}
       <div class="page-sec">Fluye a</div>
       <div class="affect"><div class="a"><div class="v">${Math.round(gb)}</div><div class="u">gasto base</div></div>
         <div class="a"><div class="v">${kcHoy}</div><div class="u">kcal hoy</div></div>
         <div class="a"><div class="v">${fmt(lm)}</div><div class="u">magra kg</div></div></div>
-      <div class="note" style="margin-top:12px"><b>TMB = 370 + 21,6 × masa magra</b> = 370 + 21,6 × ${fmt(lm)} = ${Math.round(tmb)} kcal. La progresión sale de tu histórico de peso y grasa.</div>`;
-  } else if(k==="gasto"){const arr=arrGasto(),gb=getBase(n.peso,n.grasa,n.factor),tmb=tmbKatch(lean(n.peso,n.grasa));
+      <div class="note" style="margin-top:12px"><b>TMB = 370 + 21,6 × masa magra</b>, con el peso redondeado al alza (${cw} kg) = ${Math.round(tmb)} kcal.</div>`;
+  } else if(k==="gasto"){const arr=arrGasto(),gb=getBase(cw,n.grasa,n.factor),tmb=tmbKatch(lean(cw,n.grasa));
     title="Gasto base";body=`<div class="hero-val num">${Math.round(gb)}<span class="un">kcal</span></div>${trendChip(arr,"kcal",0)}
       <div class="chartbox">${chartArr(arr,"var(--teal)")}</div>${statsPage(arr,"kcal",0)}
       <div class="page-sec">Composición</div>
@@ -818,9 +823,6 @@ function closePage(){statsActive=false;document.getElementById("page").classList
 function val(id){return document.getElementById(id).value;}
 let curView="perfil";
 /* ===== BLOQUEO · DOMINGO · DEV ===== */
-function isSunday(){return new Date().getDay()===0;}
-function planningUnlocked(){return !!S.dev||isSunday();}
-function lockGuard(){if(planningUnlocked())return false;toast("Bloqueado · se edita el domingo. Cambios puntuales en Perfil → Configuración");return true;}
 function toggleDev(){S.dev=!S.dev;save();renderPerfil();if(curView==="planificar")renderPlanificar();toast(S.dev?"Modo desarrollador ON · todo desbloqueado":"Modo desarrollador OFF");}
 /* ===== COBERTURA 24 h ===== */
 function coverageGaps(wd,key){const items=daySchedule(wd,key);const cov=items.map((it,i)=>[toMin(blkStart(it)),resolveEndMin(items,i)]).sort((a,b)=>a[0]-b[0]);
@@ -891,8 +893,6 @@ function _fld(label,inner){return `<div class="field"><label>${label}</label>${i
 function _sel(label,key,opts,struct){const o=opts.map(([v,t])=>`<option value="${v}"${tf[key]===v?" selected":""}>${t}</option>`).join("");
   return _fld(label,`<select class="input" onchange="${struct?`tfSet('${key}',this.value)`:`tf['${key}']=this.value`}"><option value="">—</option>${o}</select>`);}
 function _num(label,key,ph){return _fld(label,`<input class="input num" type="number" inputmode="decimal" placeholder="${ph||""}" value="${tf[key]||""}" oninput="tf['${key}']=this.value">`);}
-function onTimeInput(el,key){let d=el.value.replace(/\D/g,"").slice(0,5);let v=d;if(d.length>=3)v=d.slice(0,-2)+":"+d.slice(-2);el.value=v;tf[key]=v;}
-function _time(label,key,ph){return _fld(label,`<input class="input num" type="text" inputmode="numeric" placeholder="${ph||"mm:ss"}" value="${tf[key]||""}" oninput="onTimeInput(this,'${key}')">`);}
 function tfPick(key,m,s){const cur=parseClock(tf[key])||0;let mm=Math.floor(cur/60),ss=cur%60;if(m!=null)mm=+m;if(s!=null)ss=+s;tf[key]=mm+":"+pad(ss);}
 function _pick(label,key,maxMin,defMin){
   const cur=parseClock(tf[key]);let mm,ss;
@@ -966,10 +966,17 @@ function ergFields(water){
   }
   return h;
 }
+const TRAIN_KEEP={
+  correr:["correrModo","min","km","entreno"],
+  bici:["biciModo","km","min","entreno"],
+  pesas:["pesasTipo","fatiga"],
+  erg:["distTotal","timeTotal","ergTipo","ergSerieTipo","testDist","testTime","tSerie","dSerie","tDesc","nSeries","nBloques","descBloques","palFuertes","palSuaves","piramTexto","parcial"],
+  agua:["bote","distTotal","timeTotal","ergTipo","ergSerieTipo","testDist","testTime","tSerie","dSerie","tDesc","nSeries","nBloques","descBloques","palFuertes","palSuaves","piramTexto"]
+};
 function saveTraining(){
   if(!tf.type){toast("Elige el tipo de entreno");return;}
-  const log={id:id(),date:tfDate||isoToday(),ts:Date.now()};
-  Object.keys(tf).forEach(k=>{if(tf[k]!==""&&tf[k]!=null)log[k]=tf[k];});
+  const log={id:id(),date:tfDate||isoToday(),ts:Date.now(),type:tf.type};
+  (TRAIN_KEEP[tf.type]||[]).forEach(k=>{if(tf[k]!==""&&tf[k]!=null)log[k]=tf[k];});
   if(tf.type==="erg"&&tf.ergTipo==="test"&&tf.testDist&&tf.testTime){const secs=parseClock(tf.testTime);const dd=tf.testDist;const prev=S.bestMarks[dd];
     if(secs!=null&&(!prev||secs<prev.secs)){S.bestMarks[dd]={time:tf.testTime,secs,date:log.date};setTimeout(()=>toast("¡Nueva mejor marca en "+dd+" m!"),300);}}
   S.trainings.push(log);if(tfBlockKey){S.trainDone[tfBlockKey]=true;if(S.trainSnooze)delete S.trainSnooze[tfBlockKey];}
@@ -1142,7 +1149,7 @@ document.getElementById("weighLater").onclick=()=>{const used=(S.weighSnooze&&S.
 /* ---------- HOY ---------- */
 function curType(){return dayIntensity(todayKey());}
 function todaysPlan(){const wd=todayKey();const it=dayIntensity(wd);const p=planFor(curWeekKey());let macros;
-  if(p&&p.days[wd])macros=p.days[wd].macros;else{const n=num(S.perfil);macros=dayMacros(n.peso,n.grasa,n.factor,it);}
+  if(p&&p.days[wd])macros=p.days[wd].macros;else{const n=num(S.perfil);macros=dayMacros(ceilW(n.peso),n.grasa,n.factor,it);}
   const d=ENGINE.dayTypes[it]||ENGINE.dayTypes.moderado;return {intensity:it,label:d.label,color:d.c,macros};}
 function renderMacroRowVals(elId,m){document.getElementById(elId).innerHTML=`<div class="macro kc"><div class="v num">${m.kt}</div><div class="u">kcal</div></div><div class="macro p"><div class="v num">${m.P}</div><div class="u">prot g</div></div><div class="macro"><div class="v num">${m.C}</div><div class="u">carbo g</div></div><div class="macro"><div class="v num">${m.F}</div><div class="u">grasa g</div></div>`;}
 
@@ -1204,11 +1211,12 @@ function segmentNow(){const items=daySchedule(todayKey());const n=new Date();con
     if(nowSec<ss&&!next){next=items[i];nextStart=ss;}}
   return {items,cur,curStart,curEnd,next,nextStart,nowSec};}
 function fmtD(iso){const a=iso.split("-");return a[2]+"/"+a[1];}
-function nextMondayISO(){const d=new Date();const day=(d.getDay()+6)%7;d.setDate(d.getDate()+(7-day));return d.toISOString().slice(0,10);}
 function planWeight(){const lim=new Date(Date.now()-7*86400000);
   const recent=S.metrics.filter(m=>m.peso!=null&&new Date(m.date)>=lim);
-  if(recent.length){return {w:recent.reduce((a,b)=>a+b.peso,0)/recent.length,basis:`media 7 días (${recent.length} pesaje${recent.length>1?"s":""})`};}
-  return {w:+S.perfil.peso,basis:"peso actual (sin pesajes recientes)"};}
+  let raw,basis;
+  if(recent.length){raw=recent.reduce((a,b)=>a+b.peso,0)/recent.length;basis=`media 7 días (${recent.length} pesaje${recent.length>1?"s":""})`;}
+  else{raw=+S.perfil.peso;basis="peso actual (sin pesajes recientes)";}
+  const w=ceilW(raw);return {w,raw,basis:basis+` · ${fmt(raw)} → ${w} kg (al alza)`};}
 function planDueNow(){return !planFor(weekKeyPlus(1));}
 const STORE={mon:"Nevera",tue:"Nevera",wed:"Nevera",thu:"Congelar",fri:"Congelar",sat:"Congelar",sun:"Congelar"};
 function renderPlanificar(){
@@ -1313,7 +1321,7 @@ document.getElementById("sAdd").onclick=()=>{if(!canEditWeek(selSchedWeek)){toas
 /* ---------- COMIDA (semana -> día -> receta) ---------- */
 let comidaWd=null;
 function dayIntensity(wd){const k=curWeekKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].intensity;return intensWeek(k)[wd]||"moderado";}
-function dayMacrosFor(wd){const k=curWeekKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].macros;const n=num(S.perfil);return dayMacros(n.peso,n.grasa,n.factor,dayIntensity(wd));}
+function dayMacrosFor(wd){const k=curWeekKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].macros;const n=num(S.perfil);return dayMacros(ceilW(n.peso),n.grasa,n.factor,dayIntensity(wd));}
 function mealMacros(dm,i){const f=MEAL_SPLIT[i];return {kt:Math.round(dm.kt*f),P:Math.round(dm.P*f),C:Math.round(dm.C*f),F:Math.round(dm.F*f)};}
 function renderComida(){const body=document.getElementById("comidaBody");
   if(comidaWd)renderComidaDay(body,comidaWd);else renderComidaWeek(body);}
@@ -1326,7 +1334,37 @@ function renderComidaWeek(body){
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
       <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
       <span class="m-prev"><span class="m-val num">${m.kt} kcal</span><span class="chev">›</span></span></button>`;});
-  h+='</div>';body.innerHTML=h;}
+  h+='</div>';
+  h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openShopping()">🛒 Lista de la compra de la semana</button>';
+  body.innerHTML=h;}
+function openShopping(){statsActive=false;pageReturn=renderComida;document.getElementById("pageBack").style.display="flex";document.getElementById("pageBack").textContent="‹ Comidas";document.getElementById("pageTitle").textContent="Lista de la compra";renderShopping();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+const SHOPNAME={arroz:"Arroz (crudo)",pasta:"Pasta (cruda)",patata:"Patata",boniato:"Boniato",pollo:"Pollo (crudo)",pavo:"Pavo (crudo)",ternera:"Ternera (cruda)",salmon:"Salmón (crudo)",merluza:"Merluza (cruda)",cerdo:"Lomo de cerdo (crudo)",atun:"Atún en lata (escurrido)",huevo:"Huevos",lentejas:"Lentejas cocidas (bote)",garbanzos:"Garbanzos cocidos (bote)",tomate:"Tomate/sofrito",verdura:"Verdura",avena:"Avena",leche:"Leche",yogur:"Yogur griego",skyr:"Skyr",platano:"Plátanos",manzana:"Manzanas",nueces:"Nueces",miel:"Miel",whey:"Proteína whey",aceite:"Aceite de oliva"};
+const SHOPCAT={pollo:"Proteína",pavo:"Proteína",ternera:"Proteína",cerdo:"Proteína",salmon:"Proteína",merluza:"Proteína",atun:"Proteína",huevo:"Proteína",lentejas:"Proteína",garbanzos:"Proteína",arroz:"Carbohidrato",pasta:"Carbohidrato",patata:"Carbohidrato",boniato:"Carbohidrato",avena:"Carbohidrato",verdura:"Verdura y fruta",tomate:"Verdura y fruta",platano:"Verdura y fruta",manzana:"Verdura y fruta",leche:"Lácteos",yogur:"Lácteos",skyr:"Lácteos",whey:"Otros",miel:"Otros",nueces:"Otros",aceite:"Otros"};
+const SHOP_ORDER=["Proteína","Carbohidrato","Verdura y fruta","Lácteos","Otros"];
+function weekShopping(){const tot={};
+  WD.forEach(wd=>{const sf=recipeScale(wd,dayIntensity(wd));
+    ["desayuno","media","comida","merienda","cena"].forEach(mk=>{
+      mealItems(wd,mk,sf).forEach(x=>{tot[x.k]=(tot[x.k]||0)+x.g;});});});
+  return tot;}
+function fmtQty(k,g){
+  if(k==="huevo")return Math.ceil(g/50)+" uds";
+  if(k==="leche")return Math.round(g)+" ml";
+  if(k==="platano")return Math.ceil(g/120)+" uds";
+  if(k==="manzana")return Math.ceil(g/150)+" uds";
+  if(g>=1000)return (g/1000).toFixed(2).replace(".",",")+" kg";
+  return Math.round(g)+" g";}
+function renderShopping(){
+  const tot=weekShopping();
+  const groups={};
+  Object.keys(tot).forEach(k=>{let g=tot[k];if(RAWF[k])g=g*RAWF[k];const cat=SHOPCAT[k]||"Otros";(groups[cat]=groups[cat]||[]).push({k,g});});
+  let h=`<div class="note" style="margin-bottom:6px">Total a comprar para los 7 días de esta semana (${weekLabel(curWeekKey())}), según la intensidad y el plato de cada día. Pesos en crudo.</div>`;
+  if(!Object.keys(tot).length){h+=`<div class="empty" style="padding:30px">Sin datos. Guarda el plan de la semana en Planificar.</div>`;document.getElementById("pageBody").innerHTML=h;return;}
+  SHOP_ORDER.forEach(cat=>{const arr=groups[cat];if(!arr||!arr.length)return;
+    arr.sort((a,b)=>(SHOPNAME[a.k]||a.k).localeCompare(SHOPNAME[b.k]||b.k));
+    h+=`<div class="label" style="margin:14px 2px 6px">${cat}</div><div class="card flush">`+
+      arr.map(x=>`<div class="row" style="padding:11px 16px"><div class="grow r-t">${SHOPNAME[x.k]||x.k}</div><div class="num" style="font-weight:700;color:var(--ember)">${fmtQty(x.k,x.g)}</div></div>`).join("")+`</div>`;});
+  h+=`<div class="note" style="margin-top:12px">Verdura: cantidad total; la repartes en la receta de verdura común. El atún y las legumbres van en peso escurrido (de bote).</div>`;
+  document.getElementById("pageBody").innerHTML=h;}
 function openComidaDay(wd){comidaWd=wd;renderComida();window.scrollTo(0,0);}
 function backComidaWeek(){comidaWd=null;renderComida();window.scrollTo(0,0);}
 function renderComidaDay(body,wd){const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);const dm=dayRecipeMacros(wd);const goal=dayMacrosFor(wd);
@@ -1355,7 +1393,7 @@ function regenDishes(){if(!canEditWeek(curWeekKey())){toast("Solo en Modo desarr
 function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);
   const isDish=(mk==="comida"||mk==="cena");
   const items=mealItems(wd,mk,sf);const mm=mealMacrosFor(wd,mk,sf);
-  const _p=planFor(curWeekKey());const wkg=_p&&_p.planWeight?_p.planWeight:num(S.perfil).peso;
+  const _p=planFor(curWeekKey());const wkg=_p&&_p.planWeight?_p.planWeight:ceilW(num(S.perfil).peso);
   const line=isDish?dishIngLine:(x=>scaleIng(x,1));
   const list=items.map(x=>`<div class="row" style="padding:8px 0"><span class="zdot" style="background:${d.c}"></span><div class="grow">${line(x)}</div></div>`).join("");
   const title=mealName(wd,mk);
