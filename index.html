@@ -162,18 +162,23 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 .affect .a{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center;min-width:0;overflow:hidden}
 .affect .a .v{font-family:"Space Grotesk";font-weight:700;font-size:18px;color:var(--teal);font-variant-numeric:tabular-nums}
 .affect .a .u{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wkp-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin:0 4px 8px 44px}
-.wkp-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;padding:3px 4px;border-radius:10px}
-.wkp-row.now{background:rgba(232,160,61,.08)}
-.wkp-day{flex:0 0 32px;font-weight:700;font-size:13px;color:var(--muted);text-align:center}
-.wkp-day.today{color:var(--ember)}
-.wkp-track{position:relative;flex:1;height:38px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.wkp-grid{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.05)}
-.wkp-seg{position:absolute;top:3px;bottom:3px;border-radius:7px;display:flex;align-items:center;padding:0 7px;font-size:10px;font-weight:700;color:#091318;white-space:nowrap;overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.3)}
-.wkp-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--faint);letter-spacing:.06em}
-.wkp-legend{display:flex;flex-wrap:wrap;gap:9px 14px;margin-top:18px;justify-content:center}
-.wkp-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
-.wkp-dot{width:10px;height:10px;border-radius:3px}
+.wkx-wrap{margin:0 -18px}
+.wkx-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:2px 18px 6px}
+.wkx-inner{position:relative}
+.wkx-head{position:relative;height:20px;margin-bottom:8px}
+.wkx-hr{position:absolute;top:0;font-size:11px;font-weight:600;color:var(--faint);transform:translateX(-50%);white-space:nowrap}
+.wkx-row{display:flex;align-items:center;height:60px}
+.wkx-daylab{position:sticky;left:18px;z-index:4;flex:0 0 38px;height:50px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--muted);background:var(--bg);border-radius:9px;margin-right:6px;box-shadow:6px 0 8px -4px var(--bg)}
+.wkx-daylab.today{color:var(--ember)}
+.wkx-track{position:relative;height:50px;border-radius:10px;background:var(--surface2)}
+.wkx-track.today{background:rgba(232,160,61,.07);box-shadow:inset 0 0 0 1px rgba(232,160,61,.25)}
+.wkx-seg{position:absolute;top:4px;bottom:4px;border-radius:8px;padding:5px 9px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,.32);display:flex;flex-direction:column;justify-content:center}
+.wkx-seg-t{font-size:13px;font-weight:700;color:#091318;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.18}
+.wkx-seg-h{font-size:11px;font-weight:600;color:rgba(9,19,24,.78);white-space:nowrap;overflow:hidden;line-height:1.18;margin-top:1px}
+.wkx-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--faint);letter-spacing:.06em}
+.wkx-legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:18px;justify-content:center}
+.wkx-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.wkx-dot{width:11px;height:11px;border-radius:4px}
 .page-sec{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:20px 2px 8px}
 
 /* weigh modal */
@@ -346,7 +351,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.4";
+const APP_VERSION="3.5";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -1684,20 +1689,24 @@ function renderHoyUni(){const card=document.getElementById("hoyUniCard");const e
   items.slice(0,2).forEach(i=>{const d=uDaysUntil(i.date);const lab=d<0?"vencido":d===0?"hoy":"faltan "+d+"d";h+=`<div class="row" style="padding:6px 0"><div class="grow"><div class="r-t">${esc(i.title)}</div><div class="r-s" style="color:var(--faint)">${i.kind==="examen"?"Examen":"Entrega"} · ${fmtD(i.date)}</div></div><div class="r-s" style="color:var(--ember);font-weight:600">${lab}</div></div>`;});
   el.innerHTML=h;}
 const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos",uni:"Universidad"};
-function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);
+  requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollLeft=6*WKX_HW-14;});}
+const WKX_HW=64;
 function renderWeekPreview(){
-  const key=curWeekKey(),today=todayKey();
-  let h=`<div class="note" style="margin-bottom:14px">Semana ${weekLabel(key)} · 24 h por día. Toca un bloque para ver su horario.</div>`;
-  h+=`<div class="wkp-scale"><span>0</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24</span></div>`;
-  h+=WD.map(wd=>{const items=daySchedule(wd,key);let segs="";
-    items.forEach((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);if(e<=s)return;const left=s/14.4,width=(e-s)/14.4;const col=typeColor(it.type);
-      segs+=`<div class="wkp-seg" style="left:${left}%;width:${width}%;background:linear-gradient(180deg,${col},${col}cc)" onclick="wkpSeg('${wd}',${i})">${width>=12?esc(blockName(it)):""}</div>`;});
-    if(!items.length)segs=`<div class="wkp-empty">libre</div>`;
-    return `<div class="wkp-row${wd===today?" now":""}"><div class="wkp-day${wd===today?" today":""}">${WDLABEL[wd]}</div><div class="wkp-track"><span class="wkp-grid" style="left:25%"></span><span class="wkp-grid" style="left:50%"></span><span class="wkp-grid" style="left:75%"></span>${segs}</div></div>`;
+  const key=curWeekKey(),today=todayKey(),HW=WKX_HW,TW=24*HW,LAB=44;
+  let head="";for(let hh=0;hh<=24;hh+=2)head+=`<span class="wkx-hr" style="left:${hh*HW}px">${hh}h</span>`;
+  const rows=WD.map(wd=>{const items=daySchedule(wd,key),isT=wd===today;let segs="";
+    items.forEach((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);if(e<=s)return;const left=s/1440*TW,width=(e-s)/1440*TW,col=typeColor(it.type),showH=width>=92;
+      segs+=`<div class="wkx-seg" style="left:${left}px;width:${width}px;background:linear-gradient(180deg,${col},${col}cc)" onclick="wkpSeg('${wd}',${i})"><div class="wkx-seg-t">${esc(blockName(it))}</div>${showH?`<div class="wkx-seg-h">${blkStart(it)}–${minHM(e)}</div>`:""}</div>`;});
+    if(!items.length)segs=`<div class="wkx-empty">libre</div>`;
+    return `<div class="wkx-row"><div class="wkx-daylab${isT?" today":""}">${WDLABEL[wd]}</div><div class="wkx-track${isT?" today":""}" style="width:${TW}px;background-image:repeating-linear-gradient(90deg,transparent 0 ${HW-1}px,rgba(255,255,255,.045) ${HW-1}px ${HW}px)">${segs}</div></div>`;
   }).join("");
   const types=[["train","Entreno"],["class","Clase"],["study","Estudiar"],["meal","Comidas"],["sleep","Dormir"],["other","Otros"]];
-  h+=`<div class="wkp-legend">`+types.map(([t,l])=>`<span class="wkp-leg"><span class="wkp-dot" style="background:${typeColor(t)}"></span>${l}</span>`).join("")+`</div>`;
-  return h;
+  const leg=`<div class="wkx-legend">`+types.map(([t,l])=>`<span class="wkx-leg"><span class="wkx-dot" style="background:${typeColor(t)}"></span>${l}</span>`).join("")+`</div>`;
+  return `<div class="note" style="margin-bottom:12px">Semana ${weekLabel(key)} · desliza para ver las 24 h. Toca un bloque para su detalle.</div>
+    <div class="wkx-wrap"><div class="wkx-scroll" id="wkxScroll"><div class="wkx-inner" style="width:${LAB+TW}px">
+      <div class="wkx-head" style="margin-left:${LAB}px;width:${TW}px">${head}</div>${rows}
+    </div></div></div>${leg}`;
 }
 function wkpSeg(wd,i){const items=daySchedule(wd,curWeekKey());const it=items[i];if(!it)return;const e=resolveEndMin(items,i);toast(WDLABEL[wd]+" · "+blkStart(it)+"–"+minHM(e)+" · "+blockName(it));}
 function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
