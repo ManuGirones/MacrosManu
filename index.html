@@ -252,23 +252,27 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     <div class="card flush" id="weekTable"></div>
     <div class="section-h"><h2>Horario por semana</h2></div>
     <div class="card" id="schedWeekCard"></div>
-    <div class="card"><div class="label">Día de la semana</div><div class="pills" id="wdPills"></div>
-      <div class="label" style="margin-top:12px">Cobertura del día (24 h)</div><div id="schedCoverage"></div></div>
-    <div class="card flush" id="schedList"></div>
-    <div class="card" id="schedTools"></div>
-    <div class="card" id="schedTemplate"></div>
-    <div class="card">
+    <div class="card" id="dayEditor">
+      <div class="label">Día</div>
+      <div class="pills" id="wdPills"></div>
+      <div class="label" style="margin-top:12px">Cobertura del día (24 h)</div>
+      <div id="schedCoverage"></div>
+      <div id="schedList"></div>
+      <div class="divider"></div>
       <div class="label">Añadir bloque</div>
       <div class="grid2">
-        <div class="field"><label>Desde</label><input class="input num" id="sStart" type="time" value="08:00"></div>
-        <div class="field"><label>Hasta</label><input class="input num" id="sEnd" type="time" value="08:30"></div>
+        <div class="field" style="margin-bottom:10px"><label>Desde</label><input class="input num" id="sStart" type="time" value="08:00"></div>
+        <div class="field" style="margin-bottom:10px"><label>Hasta</label><input class="input num" id="sEnd" type="time" value="08:30"></div>
       </div>
-      <div class="field"><label>Tipo</label>
-        <select class="input" id="sType" onchange="toggleNameField('s')"><option value="train">Entreno</option><option value="class">Clase</option><option value="study">Estudiar</option><option value="meal">Comidas</option><option value="sleep">Dormir</option><option value="other">Otros</option></select>
+      <div class="field" style="margin-bottom:0"><label>Tipo</label>
+        <div style="display:flex;gap:10px">
+          <select class="input" id="sType" style="flex:1" onchange="toggleNameField('s')"><option value="train">Entreno</option><option value="class">Clase</option><option value="study">Estudiar</option><option value="meal">Comidas</option><option value="sleep">Dormir</option><option value="other">Otros</option></select>
+          <button class="btn teal" id="sAdd" style="width:auto;padding:0 22px;white-space:nowrap">Añadir</button>
+        </div>
       </div>
-      <div class="field" id="sNameField" style="display:none"><label>Nombre del bloque</label><input class="input" id="sLabel" placeholder="Ej: recados, médico…"></div>
-      <button class="btn teal" id="sAdd" style="margin-top:10px">Añadir al día</button>
+      <div class="field" id="sNameField" style="display:none;margin-top:10px"><label>Nombre del bloque</label><input class="input" id="sLabel" placeholder="Ej: recados, médico…"></div>
     </div>
+    <div class="card" id="schedTools"></div>
   </section>
 
   <!-- COMIDA -->
@@ -322,7 +326,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="2.8";
+const APP_VERSION="2.9";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -1359,33 +1363,30 @@ function renderSchedule(){
   WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;copySel=new Set();renderSchedule();};wp.appendChild(b);});
   document.getElementById("schedCoverage").innerHTML=coverageBar(selWeekday,wk)+gapsNote(selWeekday,wk);
   const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday,wk);
-  if(!items.length)list.innerHTML='<div class="empty" style="padding:24px">Día libre. '+(locked?"Selecciona una semana siguiente para editar.":"Añade un bloque abajo.")+'</div>';
-  items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 16px";
+  if(!items.length)list.innerHTML='<div class="empty" style="padding:18px 10px">Día libre. '+(locked?"Selecciona una semana siguiente para editar.":"Añade un bloque abajo.")+'</div>';
+  items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 0";
     const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
     r.innerHTML=`<div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(blockName(it))}</div></div>${typeTag(it.type)}${locked?"":'<button class="btn-del">×</button>'}`;
     if(!locked){r.querySelector(".btn-del").onclick=()=>{const w=schedWeek(wk);w[selWeekday]=(w[selWeekday]||[]).filter(x=>x!==it);save();renderSchedule();};}list.appendChild(r);});
   const tools=document.getElementById("schedTools");
   if(locked){tools.style.display="none";}
   else{tools.style.display="block";const others=WD.filter(d=>d!==selWeekday);
+    const prev=weekKeyAdd(wk,-1);const prevW=S.weekSchedules[prev];const hasPrev=prevW&&WD.some(d=>(prevW[d]||[]).length);
     tools.innerHTML=`<div class="label">Replicar ${WDLABEL_LONG[selWeekday]} a otros días</div>
       <div class="pills" id="copyPills" style="margin-bottom:10px"></div>
       <button class="btn sm teal" id="copyApply">Replicar a los marcados</button>
-      <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques de esta semana (sobrescribe).</div>`;
+      <div class="note" style="margin-top:8px">Copia los bloques de ${WDLABEL[selWeekday]} a los días que marques (sobrescribe).</div>
+      <div class="divider"></div>
+      <div class="label">Copiar otra semana</div>
+      <div class="note" style="margin:4px 0 10px">Usa el horario de la semana anterior (${weekLabel(prev)}) como base. ${hasPrev?"":"<b>La semana anterior está vacía.</b>"}</div>
+      <button class="btn sm" id="tplLoad" ${hasPrev?"":"disabled style=opacity:.5"}>Copiar de la semana anterior</button>`;
     const cp=document.getElementById("copyPills");
     others.forEach(d=>{const b=document.createElement("button");b.className="pill"+(copySel.has(d)?" on":"");b.textContent=WDLABEL[d];
       b.onclick=()=>{copySel.has(d)?copySel.delete(d):copySel.add(d);renderSchedule();};cp.appendChild(b);});
     document.getElementById("copyApply").onclick=()=>{
       if(!copySel.size){toast("Marca a qué días copiar");return;}
       const w=schedWeek(wk);copySel.forEach(d=>{w[d]=JSON.parse(JSON.stringify(w[selWeekday]||[]));});
-      const n=copySel.size;copySel=new Set();save();renderSchedule();toast(`Horario replicado a ${n} día${n>1?"s":""}`);};}
-  // Copiar de la semana anterior
-  const tpl=document.getElementById("schedTemplate");
-  if(locked){tpl.style.display="none";}
-  else{tpl.style.display="block";const prev=weekKeyAdd(wk,-1);const prevW=S.weekSchedules[prev];
-    const hasPrev=prevW&&WD.some(d=>(prevW[d]||[]).length);
-    tpl.innerHTML=`<div class="label">Plantilla</div>
-      <div class="note" style="margin:4px 0 10px">Copia el horario de la semana anterior (${weekLabel(prev)}) como base y ajústalo. ${hasPrev?"":"<b>La semana anterior está vacía.</b>"}</div>
-      <button class="btn sm" id="tplLoad" ${hasPrev?"":"disabled style=opacity:.5"}>Copiar de la semana anterior</button>`;
+      const n=copySel.size;copySel=new Set();save();renderSchedule();toast(`Horario replicado a ${n} día${n>1?"s":""}`);};
     if(hasPrev)document.getElementById("tplLoad").onclick=()=>{
       if(!confirm("Esto sobrescribe el horario de los 7 días de esta semana con el de la semana anterior. ¿Seguir?"))return;
       S.weekSchedules[wk]=JSON.parse(JSON.stringify(prevW));save();renderSchedule();toast("Horario copiado");};}
