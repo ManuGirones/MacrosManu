@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="2.6";
+const APP_VERSION="2.7";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -997,9 +997,60 @@ function trainSummary(l){const m={agua:"Agua",erg:"Ergómetro",pesas:"Pesas",bic
   else if(l.type==="agua")x=[l.distTotal?l.distTotal+" m":"",l.timeTotal||""].filter(Boolean).join(" · ");
   return {title:m,sub:x};}
 function renderRecentTrainings(){const el=document.getElementById("recentTrainings");if(!el)return;
-  const list=S.trainings.slice().sort((a,b)=>b.ts-a.ts).slice(0,5);
-  if(!list.length){el.innerHTML='<div class="note" style="margin-top:8px">Sin entrenos registrados aún.</div>';return;}
-  el.innerHTML='<div class="label" style="margin:12px 0 2px">Últimos entrenos</div>'+list.map(l=>{const s=trainSummary(l);return `<div class="row" style="padding:9px 0"><div class="grow"><div class="r-t">${s.title}</div><div class="r-s">${esc(s.sub)}</div></div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`;}).join("");}
+  const list=S.trainings.filter(l=>l.date===isoToday()).sort((a,b)=>b.ts-a.ts);
+  if(!list.length){el.innerHTML='<div class="note" style="margin-top:8px">Aún no has registrado entrenos hoy.</div>';return;}
+  el.innerHTML='<div class="label" style="margin:12px 0 2px">Entrenos de hoy</div>'+list.map(l=>{const s=trainSummary(l);return `<div class="row" style="padding:10px 0" onclick="openTrainDetail('${l.id}')"><div class="grow"><div class="r-t">${s.title}</div><div class="r-s">${esc(s.sub)}</div></div><div style="color:var(--faint);font-size:20px;padding-left:8px">›</div></div>`;}).join("");}
+function trainById(id){return S.trainings.find(t=>t.id===id);}
+function openTrainDetail(id){const l=trainById(id);if(!l)return;statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Entreno";document.getElementById("pageBody").innerHTML=renderTrainDetail(l);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function fmtSecs(s){s=Math.round(s);const m=Math.floor(s/60);return m+":"+pad(s%60);}
+function renderTrainDetail(l){
+  if(!l)return STATS_EMPTY;
+  const T={agua:"Agua",erg:"Ergómetro",pesas:"Pesas",bici:"Bici",correr:"Correr"}[l.type]||l.type;
+  const chips=[],rows=[];const add=(lab,val)=>{if(val!=null&&val!=="")rows.push([lab,val]);};
+  if(l.type==="erg"||l.type==="agua"){
+    const dist=_n(l.distTotal),secs=_secs(l.timeTotal);
+    if(l.bote)add("Bote",l.bote);
+    add("Tipo de sesión",{rodaje:"Rodaje",series:"Series",test:"Test"}[l.ergTipo]||l.ergTipo);
+    if(dist)chips.push([fmt(dist/1000,2),"km"]);
+    if(secs)chips.push([fmtSecs(secs),"tiempo"]);
+    if(dist&&secs){chips.push([fmtSecs(secs/(dist/500)),"/500 m"]);if(l.type==="erg")chips.push([Math.round(2.80/Math.pow(secs/dist,3)),"W est."]);}
+    if(l.ergTipo==="test"){add("Distancia del test",(l.testDist||"?")+" m");add("Tiempo",l.testTime);
+      const bm=S.bestMarks[l.testDist];if(bm&&bm.time===l.testTime&&bm.date===l.date)add("",`🏅 Mejor marca en ${l.testDist} m`);}
+    if(l.ergTipo==="series"){
+      add("Tipo de series",{tiempo:"Series de tiempo",distancia:"Series de distancia",intervalos:"Intervalos",piramides:"Pirámides"}[l.ergSerieTipo]||l.ergSerieTipo);
+      if(l.ergSerieTipo==="tiempo")add("Cada serie",l.tSerie);
+      if(l.ergSerieTipo==="distancia")add("Cada serie",(l.dSerie||"?")+" m");
+      if(l.ergSerieTipo==="intervalos"){add("Paladas fuertes",l.palFuertes);add("Paladas suaves",l.palSuaves);}
+      if(l.ergSerieTipo==="piramides"&&l.piramTexto)add("Pirámide",l.piramTexto);
+      if(l.tDesc)add("Descanso entre series",l.tDesc);
+      if(l.nSeries)add("Nº de series",l.nSeries);
+      if(l.nBloques)add("Nº de bloques",l.nBloques);
+      if(+l.nBloques>1&&l.descBloques)add("Descanso entre bloques",l.descBloques);
+      if(l.ergSerieTipo==="distancia"&&_n(l.dSerie)&&_n(l.nSeries))add("Distancia total de series",_n(l.dSerie)*_n(l.nSeries)*(_n(l.nBloques)||1)+" m");
+      if(l.ergSerieTipo==="tiempo"&&l.tSerie&&_n(l.nSeries))add("Tiempo total de series",fmtSecs(_secs(l.tSerie)*_n(l.nSeries)*(_n(l.nBloques)||1)));
+      if(l.parcial&&l.type==="erg")add("Parcial medio",l.parcial+" /500 m");
+    }
+    if(l.ergTipo==="rodaje"&&l.parcial&&l.type==="erg")add("Parcial",l.parcial+" /500 m");
+  } else if(l.type==="pesas"){
+    add("Tipo",{potencia:"Potencia",resistencia:"Resistencia"}[l.pesasTipo]||l.pesasTipo);
+    if(l.fatiga)chips.push([l.fatiga+"/10","fatiga"]);
+  } else if(l.type==="correr"){
+    add("Dónde",{cinta:"Cinta de correr",libre:"Libre"}[l.correrModo]||l.correrModo);
+    if(l.min)chips.push([l.min,"min"]);
+    if(_n(l.km))chips.push([fmt(_n(l.km),1),"km"]);
+    if(l.correrModo==="libre"&&_n(l.km)&&_n(l.min))chips.push([fmtSecs(_n(l.min)/_n(l.km)*60),"min/km"]);
+    add("Entreno",{series:"Series",fondo:"Fondo"}[l.entreno]||l.entreno);
+  } else if(l.type==="bici"){
+    add("Modalidad",{estatica:"Estática",carretera:"Carretera",btt:"BTT"}[l.biciModo]||l.biciModo);
+    if(_n(l.km))chips.push([fmt(_n(l.km),1),"km"]);
+    if(l.min)chips.push([l.min,"min"]);
+    if(_n(l.km)&&_n(l.min))chips.push([fmt(_n(l.km)/(_n(l.min)/60),1),"km/h"]);
+    add("Entreno",{series:"Series",fondo:"Fondo"}[l.entreno]||l.entreno);
+  }
+  let h=`<div class="card" style="text-align:center"><div class="hero-val num" style="font-size:24px">${T}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`;
+  if(chips.length){const n=Math.min(chips.length,4);h+=`<div class="affect" style="grid-template-columns:repeat(${n},1fr);margin-top:12px">`+chips.slice(0,4).map(c=>`<div class="a"><div class="v num">${c[0]}</div><div class="u">${c[1]}</div></div>`).join("")+`</div>`;}
+  h+=`<div class="card flush" style="margin-top:12px">`+rows.map(r=>r[0]?`<div class="row" style="padding:10px 16px;align-items:flex-start"><div class="grow r-t">${esc(r[0])}</div><div class="r-s" style="font-weight:600;text-align:right;max-width:60%">${esc(String(r[1]))}</div></div>`:`<div class="row" style="padding:10px 16px"><div class="grow r-t" style="color:var(--ember);font-weight:600">${esc(String(r[1]))}</div></div>`).join("")+`</div>`;
+  return h;}
 function renderBestMarks(){const el=document.getElementById("bestMarks");if(!el)return;const ds=["500","1000","2000","6000"];
   el.innerHTML=ds.map(d=>{const b=S.bestMarks[d];return `<div class="row" style="padding:11px 16px"><div class="r-t" style="flex:0 0 70px">${d} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${b?b.time:"—"}</div>${b?`<div class="r-s" style="color:var(--faint)">${fmtD(b.date)}</div>`:""}</div>`;}).join("");}
 /* ===== RESUMEN DE ENTRENAMIENTOS ===== */
@@ -1035,13 +1086,16 @@ function renderStats(){
   const L=S.trainings.filter(l=>inPeriod(l.date,statsPeriod));
   const by=t=>L.filter(l=>l.type===t);
   document.getElementById("pageBack").textContent=statsStack.length>1?"‹ Volver":"‹ Perfil";
-  let title="Resumen de entrenamientos";let h=statsPills();
+  let title="Resumen de entrenamientos";let h=(top.v==="session")?"":statsPills();
   if(top.v==="home"){
     const totMin=L.reduce((a,l)=>a+_n(l.min)*60+_secs(l.timeTotal),0);
     h+=shead("General")+`<div class="card flush">`+srow("Entrenos totales",L.length)+srow("Tiempo total",durFmt(totMin))+`</div>`;
     h+=`<div class="label" style="margin:14px 2px 6px">Por tipo · toca para ver detalle</div><div class="card flush">`+
       STATS_TYPES.map(([k,lab])=>{const n=by(k).length;return drillRow(lab,n+" entreno"+(n===1?"":"s"),`statsGo('type','${k}')`);}).join("")+`</div>`;
-  } else if(top.v==="type"){title=STATS_TYPES.find(x=>x[0]===top.p)[1];h+=renderStatsType(top.p,by(top.p));}
+  } else if(top.v==="type"){title=STATS_TYPES.find(x=>x[0]===top.p)[1];h+=renderStatsType(top.p,by(top.p));
+    if(by(top.p).length)h+=`<div class="label" style="margin:14px 2px 6px">Sesiones</div><div class="card flush">`+drillRow("Ver una a una",by(top.p).length+" entrenos","statsGo('sessions','"+top.p+"')")+`</div>`;}
+  else if(top.v==="sessions"){title=(STATS_TYPES.find(x=>x[0]===top.p)||["","Sesiones"])[1]+" · sesiones";h+=renderSessionsList(by(top.p));}
+  else if(top.v==="session"){title="Entreno";h=renderTrainDetail(trainById(top.p));}
   else if(top.v==="ergList"){title="Rodajes y series";h+=renderErgList(by("erg"));}
   else if(top.v==="ergTests"){title="Tests de ergómetro";h+=renderTests(by("erg"));}
   else if(top.v==="aguaBoats"){title="Por tipo de barco";h+=renderAguaBoats(by("agua"));}
@@ -1050,6 +1104,8 @@ function renderStats(){
   document.getElementById("pageTitle").textContent=title;
   document.getElementById("pageBody").innerHTML=h;
 }
+function renderSessionsList(A){if(!A.length)return STATS_EMPTY;const list=A.slice().sort((a,b)=>b.ts-a.ts);
+  return `<div class="card flush">`+list.map(l=>{const s=trainSummary(l);return `<div class="row" style="padding:10px 16px" onclick="statsGo('session','${l.id}')"><div class="grow"><div class="r-t">${s.title}</div><div class="r-s" style="color:var(--faint)">${esc(s.sub)} · ${fmtD(l.date)}</div></div><div style="color:var(--faint);font-size:20px;padding-left:8px">›</div></div>`;}).join("")+`</div>`;}
 function renderStatsType(t,A){
   if(!A.length)return STATS_EMPTY;
   if(t==="correr"){const km=A.reduce((a,l)=>a+_n(l.km),0),min=A.reduce((a,l)=>a+_n(l.min),0);
@@ -1067,10 +1123,10 @@ function renderStatsType(t,A){
   return "";}
 function renderErgList(A){const list=A.filter(l=>l.ergTipo==="rodaje"||l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
   if(!list.length)return STATS_EMPTY;
-  return `<div class="card flush">`+list.map(l=>`<div class="row" style="padding:11px 16px"><div class="grow"><div class="r-t">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${esc(l.parcial||"—")}</div></div>`).join("")+`</div>`;}
+  return `<div class="card flush">`+list.map(l=>`<div class="row" style="padding:11px 16px" onclick="statsGo('session','${l.id}')"><div class="grow"><div class="r-t">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div><div class="num" style="font-weight:700;color:var(--ember);padding-right:6px">${esc(l.parcial||"—")}</div><div style="color:var(--faint);font-size:18px">›</div></div>`).join("")+`</div>`;}
 function renderTests(A){const t=A.filter(l=>l.ergTipo==="test").sort((a,b)=>a.ts-b.ts);
   if(!t.length)return STATS_EMPTY;
-  return `<div class="card flush">`+t.map(l=>`<div class="row" style="padding:11px 16px"><div class="r-t" style="flex:0 0 70px">${esc(l.testDist||"?")} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${esc(l.testTime||"—")}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
+  return `<div class="card flush">`+t.map(l=>`<div class="row" style="padding:11px 16px" onclick="statsGo('session','${l.id}')"><div class="r-t" style="flex:0 0 64px">${esc(l.testDist||"?")} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${esc(l.testTime||"—")}</div><div class="r-s" style="color:var(--faint);padding-right:6px">${fmtD(l.date)}</div><div style="color:var(--faint);font-size:18px">›</div></div>`).join("")+`</div>`;}
 function renderAguaBoats(A){const boats=["1x","2x","2-","4x","4+","4-","8+"];
   const rows=boats.map(b=>{const bl=A.filter(l=>l.bote===b);if(!bl.length)return "";const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0);
     return drillRow(b,fmt(d/1000,1)+" km · "+durFmt(ts)+" · "+bl.length+" salidas","statsGo('aguaBoat','"+b+"')");}).join("");
@@ -1078,11 +1134,11 @@ function renderAguaBoats(A){const boats=["1x","2x","2-","4x","4+","4-","8+"];
 function renderAguaBoat(A,b){const bl=A.filter(l=>l.bote===b);if(!bl.length)return STATS_EMPTY;const d=bl.reduce((a,l)=>a+_n(l.distTotal),0),ts=bl.reduce((a,l)=>a+_secs(l.timeTotal),0);
   let h=`<div class="card flush">`+srow("Salidas",bl.length)+srow("Distancia total",fmt(d/1000,1)+" km")+srow("Tiempo total",durFmt(ts))+srow("Rodajes",bl.filter(l=>l.ergTipo==="rodaje").length)+srow("Series",bl.filter(l=>l.ergTipo==="series").length)+srow("Tests",bl.filter(l=>l.ergTipo==="test").length)+`</div>`;
   const ser=bl.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
-  if(ser.length)h+=`<div class="label" style="margin:14px 2px 6px">Series (sin parcial)</div><div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px"><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;
+  if(ser.length)h+=`<div class="label" style="margin:14px 2px 6px">Series (sin parcial)</div><div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px" onclick="statsGo('session','${l.id}')"><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint);padding-right:6px">${fmtD(l.date)}</div><div style="color:var(--faint);font-size:18px">›</div></div>`).join("")+`</div>`;
   return h;}
 function renderAguaSeries(A){const ser=A.filter(l=>l.ergTipo==="series").sort((a,b)=>a.ts-b.ts);
   if(!ser.length)return STATS_EMPTY;
-  return `<div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px"><div class="r-t" style="flex:0 0 44px;font-weight:700">${esc(l.bote||"?")}</div><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`).join("")+`</div>`;}
+  return `<div class="card flush">`+ser.map(l=>`<div class="row" style="padding:10px 16px" onclick="statsGo('session','${l.id}')"><div class="r-t" style="flex:0 0 44px;font-weight:700">${esc(l.bote||"?")}</div><div class="grow r-s">${ergDetail(l)}</div><div class="r-s" style="color:var(--faint);padding-right:6px">${fmtD(l.date)}</div><div style="color:var(--faint);font-size:18px">›</div></div>`).join("")+`</div>`;}
 document.getElementById("pageBack").onclick=pageBackTap;
 function savePageField(field,inputId,k){const v=parseFloat(document.getElementById(inputId).value);
   if(isNaN(v)){toast("Valor no válido");return;}S.perfil[field]=v;
