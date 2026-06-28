@@ -322,7 +322,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="2.7";
+const APP_VERSION="2.8";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -886,7 +886,7 @@ function renderCfgDietaSum(wd){const dm=dayRecipeMacros(wd);const goal=dayMacros
 function cfgSetIntensity(wd,v){const k=curWeekKey();intensWeek(k)[wd]=v;const p=planFor(k);if(p&&p.days[wd])p.days[wd]={intensity:v,macros:dayMacros(p.planWeight,p.planGrasa,p.factor,v)};save();renderCfgDieta();toast("Intensidad actualizada");}
 function cfgSetDish(wd,slot,id){if(!S.weekDishes||S.dishesWeekKey!==curWeekKey())generateWeekDishes();S.weekDishes[wd]=S.weekDishes[wd]||{};S.weekDishes[wd][slot]=+id;save();renderCfgDieta();toast("Plato actualizado");}
 /* ===== REGISTRO DE ENTRENO ===== */
-let tf={type:""},tfDate=null,tfBlockKey=null;
+let tf={type:""},tfDate=null,tfBlockKey=null,tfEditId=null;
 function tfSet(k,v){tf[k]=v;renderTrainForm();}
 function parseClock(s){s=(s||"").trim();if(!s)return null;if(s.indexOf(":")>=0){const p=s.split(":");return (+p[0])*60+(+(p[1]||0));}const n=+s;return isNaN(n)?null:n;}
 function _fld(label,inner){return `<div class="field"><label>${label}</label>${inner}</div>`;}
@@ -907,10 +907,29 @@ function _pick(label,key,maxMin,defMin){
     <select class="input" style="flex:1;text-align:center" onchange="tfPick('${key}',null,this.value)">${sO}</select>
     <span class="r-s" style="color:var(--muted)">seg</span></div>`);}
 const _blkOpts=[...Array(8)].map((_,i)=>[String(i+1),String(i+1)]);
+function paceParts(v){v=(""+(v==null?"":v)).trim();let mm=0,ss=0,d=0;if(v){const c=v.split(":");let sec;if(c.length>=2){mm=parseInt(c[0],10)||0;sec=c[1]||"";}else{sec=c[0]||"";}const sd=sec.split(".");ss=parseInt(sd[0],10)||0;d=parseInt(sd[1],10)||0;}return {mm,ss,d};}
+function paceStr(mm,ss,d){return mm+":"+pad(ss)+"."+d;}
+function tfPace(key,m,s,dd){const p=paceParts(tf[key]);if(m!=null)p.mm=+m;if(s!=null)p.ss=+s;if(dd!=null)p.d=+dd;tf[key]=paceStr(p.mm,p.ss,p.d);}
+function _pickPace(label,key){const p=paceParts(tf[key]);if(tf[key]==null||tf[key]==="")tf[key]=paceStr(p.mm,p.ss,p.d);
+  let mO="";for(let i=0;i<=9;i++)mO+=`<option value="${i}"${i===p.mm?" selected":""}>${i}</option>`;
+  let sO="";for(let i=0;i<60;i++)sO+=`<option value="${i}"${i===p.ss?" selected":""}>${pad(i)}</option>`;
+  let dO="";for(let i=0;i<10;i++)dO+=`<option value="${i}"${i===p.d?" selected":""}>${i}</option>`;
+  return _fld(label,`<div style="display:flex;gap:6px;align-items:center">
+    <select class="input" style="flex:1;text-align:center" onchange="tfPace('${key}',this.value,null,null)">${mO}</select><span class="r-s" style="color:var(--muted)">min</span>
+    <select class="input" style="flex:1;text-align:center" onchange="tfPace('${key}',null,this.value,null)">${sO}</select><span class="r-s" style="color:var(--muted)">seg</span>
+    <select class="input" style="flex:0.7;text-align:center" onchange="tfPace('${key}',null,null,this.value)">${dO}</select><span class="r-s" style="color:var(--muted)">déc</span></div>`);}
 let tfBlocking=false;
-function openTrainForm(opts){tf={type:""};tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;tfBlocking=!!(opts&&opts.blocking);
+function openTrainForm(opts){tf={type:""};tfEditId=null;tfDate=(opts&&opts.date)||isoToday();tfBlockKey=(opts&&opts.blockKey)||null;tfBlocking=!!(opts&&opts.blocking);
   pageReturn=(curView==="hoy"?renderHoy:renderPerfil);document.getElementById("pageTitle").textContent="Registrar entreno";
   document.getElementById("pageBack").style.display=tfBlocking?"none":"flex";
+  renderTrainForm();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function editTraining(id,ctx){const l=trainById(id);if(!l)return;
+  if(ctx==="stats"&&!S.dev){toast("Activa el modo desarrollador para editar entrenos pasados");return;}
+  tf=Object.assign({},l);delete tf.id;delete tf.ts;delete tf.date;
+  tfEditId=id;tfDate=l.date;tfBlockKey=null;tfBlocking=false;statsActive=false;
+  pageReturn=(ctx==="stats")?function(){openStats();statsGo("session",id);}:function(){openTrainDetail(id);};
+  document.getElementById("pageTitle").textContent="Editar entreno";
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Cancelar";
   renderTrainForm();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function renderTrainForm(){
   let h=_sel("Tipo de entreno","type",[["agua","Agua"],["erg","Ergómetro"],["pesas","Pesas"],["bici","Bici"],["correr","Correr"]],true);
@@ -942,7 +961,7 @@ function ergFields(water){
   h+=_num("Distancia total (m)","distTotal","m")+_pick("Tiempo total","timeTotal",240,60);
   h+=_sel("Tipo de sesión","ergTipo",[["rodaje","Rodaje"],["series","Series"],["test","Test"]],true);
   if(tf.ergTipo==="rodaje"){
-    if(!water)h+=_pick("Parcial del rodaje (/500 m)","parcial",9,0);
+    if(!water)h+=_pickPace("Parcial del rodaje (/500 m)","parcial");
   } else if(tf.ergTipo==="test"){
     h+=_sel("Distancia del test","testDist",[["500","500 m"],["1000","1000 m"],["2000","2000 m"],["6000","6000 m"]],false)+_pick("Tiempo del test","testTime",90,0);
   } else if(tf.ergTipo==="series"){
@@ -953,15 +972,15 @@ function ergFields(water){
       h+=_pick("Descanso entre series","tDesc",20,0)+_num("Nº de series","nSeries","");
       h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
       if(+tf.nBloques>1)h+=_pick("Descanso entre bloques","descBloques",30,0);
-      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
+      if(!water)h+=_pickPace("Parcial medio (/500 m)","parcial");
     } else if(st==="intervalos"){
       h+=_num("Paladas fuertes","palFuertes","")+_num("Paladas suaves","palSuaves","")+_num("Nº de series","nSeries","");
       h+=_sel("Nº de bloques","nBloques",_blkOpts,true);
       if(+tf.nBloques>1)h+=_pick("Descanso entre bloques","descBloques",30,0);
-      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
+      if(!water)h+=_pickPace("Parcial medio (/500 m)","parcial");
     } else if(st==="piramides"){
       h+=_fld("Explica la pirámide",`<textarea class="input" rows="3" oninput="tf['piramTexto']=this.value">${esc(tf.piramTexto||"")}</textarea>`);
-      if(!water)h+=_pick("Parcial medio (/500 m)","parcial",9,0);
+      if(!water)h+=_pickPace("Parcial medio (/500 m)","parcial");
     }
   }
   return h;
@@ -975,6 +994,15 @@ const TRAIN_KEEP={
 };
 function saveTraining(){
   if(!tf.type){toast("Elige el tipo de entreno");return;}
+  if(tfEditId){
+    const i=S.trainings.findIndex(t=>t.id===tfEditId);
+    if(i<0){tfEditId=null;toast("Entreno no encontrado");return;}
+    const old=S.trainings[i];
+    const log={id:old.id,date:tfDate||old.date,ts:old.ts,type:tf.type};
+    (TRAIN_KEEP[tf.type]||[]).forEach(k=>{if(tf[k]!==""&&tf[k]!=null)log[k]=tf[k];});
+    if(tf.type==="erg"&&tf.ergTipo==="test"&&tf.testDist&&tf.testTime){const secs=parseClock(tf.testTime);const dd=tf.testDist;const prev=S.bestMarks[dd];
+      if(secs!=null&&(!prev||secs<prev.secs)){S.bestMarks[dd]={time:tf.testTime,secs,date:log.date};}}
+    S.trainings[i]=log;tfEditId=null;save();closePage();toast("Entreno actualizado");return;}
   const log={id:id(),date:tfDate||isoToday(),ts:Date.now(),type:tf.type};
   (TRAIN_KEEP[tf.type]||[]).forEach(k=>{if(tf[k]!==""&&tf[k]!=null)log[k]=tf[k];});
   if(tf.type==="erg"&&tf.ergTipo==="test"&&tf.testDist&&tf.testTime){const secs=parseClock(tf.testTime);const dd=tf.testDist;const prev=S.bestMarks[dd];
@@ -1001,9 +1029,9 @@ function renderRecentTrainings(){const el=document.getElementById("recentTrainin
   if(!list.length){el.innerHTML='<div class="note" style="margin-top:8px">Aún no has registrado entrenos hoy.</div>';return;}
   el.innerHTML='<div class="label" style="margin:12px 0 2px">Entrenos de hoy</div>'+list.map(l=>{const s=trainSummary(l);return `<div class="row" style="padding:10px 0" onclick="openTrainDetail('${l.id}')"><div class="grow"><div class="r-t">${s.title}</div><div class="r-s">${esc(s.sub)}</div></div><div style="color:var(--faint);font-size:20px;padding-left:8px">›</div></div>`;}).join("");}
 function trainById(id){return S.trainings.find(t=>t.id===id);}
-function openTrainDetail(id){const l=trainById(id);if(!l)return;statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Entreno";document.getElementById("pageBody").innerHTML=renderTrainDetail(l);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function openTrainDetail(id){const l=trainById(id);if(!l)return;statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Entreno";document.getElementById("pageBody").innerHTML=renderTrainDetail(l,"hoy");document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function fmtSecs(s){s=Math.round(s);const m=Math.floor(s/60);return m+":"+pad(s%60);}
-function renderTrainDetail(l){
+function renderTrainDetail(l,ctx){
   if(!l)return STATS_EMPTY;
   const T={agua:"Agua",erg:"Ergómetro",pesas:"Pesas",bici:"Bici",correr:"Correr"}[l.type]||l.type;
   const chips=[],rows=[];const add=(lab,val)=>{if(val!=null&&val!=="")rows.push([lab,val]);};
@@ -1050,6 +1078,8 @@ function renderTrainDetail(l){
   let h=`<div class="card" style="text-align:center"><div class="hero-val num" style="font-size:24px">${T}</div><div class="r-s" style="color:var(--faint)">${fmtD(l.date)}</div></div>`;
   if(chips.length){const n=Math.min(chips.length,4);h+=`<div class="affect" style="grid-template-columns:repeat(${n},1fr);margin-top:12px">`+chips.slice(0,4).map(c=>`<div class="a"><div class="v num">${c[0]}</div><div class="u">${c[1]}</div></div>`).join("")+`</div>`;}
   h+=`<div class="card flush" style="margin-top:12px">`+rows.map(r=>r[0]?`<div class="row" style="padding:10px 16px;align-items:flex-start"><div class="grow r-t">${esc(r[0])}</div><div class="r-s" style="font-weight:600;text-align:right;max-width:60%">${esc(String(r[1]))}</div></div>`:`<div class="row" style="padding:10px 16px"><div class="grow r-t" style="color:var(--ember);font-weight:600">${esc(String(r[1]))}</div></div>`).join("")+`</div>`;
+  if(ctx==="hoy"||(ctx==="stats"&&S.dev))h+=`<button class="btn ghost" style="margin-top:14px;width:100%" onclick="editTraining('${l.id}','${ctx}')">Editar entreno</button>`;
+  else if(ctx==="stats")h+=`<div class="note" style="margin-top:12px">Para editar un entreno pasado, activa el modo desarrollador en Perfil → Configuración.</div>`;
   return h;}
 function renderBestMarks(){const el=document.getElementById("bestMarks");if(!el)return;const ds=["500","1000","2000","6000"];
   el.innerHTML=ds.map(d=>{const b=S.bestMarks[d];return `<div class="row" style="padding:11px 16px"><div class="r-t" style="flex:0 0 70px">${d} m</div><div class="grow num" style="font-weight:700;color:var(--ember)">${b?b.time:"—"}</div>${b?`<div class="r-s" style="color:var(--faint)">${fmtD(b.date)}</div>`:""}</div>`;}).join("");}
@@ -1095,7 +1125,7 @@ function renderStats(){
   } else if(top.v==="type"){title=STATS_TYPES.find(x=>x[0]===top.p)[1];h+=renderStatsType(top.p,by(top.p));
     if(by(top.p).length)h+=`<div class="label" style="margin:14px 2px 6px">Sesiones</div><div class="card flush">`+drillRow("Ver una a una",by(top.p).length+" entrenos","statsGo('sessions','"+top.p+"')")+`</div>`;}
   else if(top.v==="sessions"){title=(STATS_TYPES.find(x=>x[0]===top.p)||["","Sesiones"])[1]+" · sesiones";h+=renderSessionsList(by(top.p));}
-  else if(top.v==="session"){title="Entreno";h=renderTrainDetail(trainById(top.p));}
+  else if(top.v==="session"){title="Entreno";h=renderTrainDetail(trainById(top.p),"stats");}
   else if(top.v==="ergList"){title="Rodajes y series";h+=renderErgList(by("erg"));}
   else if(top.v==="ergTests"){title="Tests de ergómetro";h+=renderTests(by("erg"));}
   else if(top.v==="aguaBoats"){title="Por tipo de barco";h+=renderAguaBoats(by("agua"));}
