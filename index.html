@@ -356,7 +356,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.7";
+const APP_VERSION="3.8";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -560,7 +560,8 @@ function mealItems(wd,mk,sf){if(mk==="comida"||mk==="cena")return computeDishIte
   return (RECIPES_ING[dayIntensity(wd)][mk]||[]).map(x=>({n:x.n,k:x.k,g:sgram(x,sf),t:x.t,u:x.u}));}
 function mealMacrosFor(wd,mk,sf){if(mk==="comida"||mk==="cena")return dishMacros(computeDishItems(assignedDish(wd,mk),wd,mk));return recipeMacros(RECIPES_ING[dayIntensity(wd)][mk]||[],sf);}
 function mealName(wd,mk){if(mk==="comida"||mk==="cena")return dishById(assignedDish(wd,mk)).name;return RECIPE_NAME[mk]||"";}
-function assignedDish(wd,mk){if(!S.weekDishes||S.dishesWeekKey!==curWeekKey()||!S.weekDishes[wd]||!S.weekDishes[wd][mk]){generateWeekDishes();save();}return (S.weekDishes&&S.weekDishes[wd]&&S.weekDishes[wd][mk])||(mk==="comida"?1:12);}
+function assignedDish(wd,mk){const key=dietKey();const ov=ovGet(key,wd,mk);if(ov&&dishById(ov))return ov;
+  const base=(comboFor(key)[wd]||{})[mk]||(mk==="comida"?1:12);return dishRepair(base,wd,dayIntensity(wd));}
 const QUOTAS={pescado:3,azul:1,legumbre:2,carneroja:1,huevo:1};
 const CONSDAY={mon:["FRESCO","N3","CONG"],tue:["FRESCO","N3","CONG"],wed:["N3","CONG"],thu:["CONG"],fri:["CONG"],sat:["CONG"],sun:["CONG"]};
 function dishAllowed(d,wd,it){if(!d.cons.some(c=>CONSDAY[wd].includes(c)))return false;
@@ -598,6 +599,21 @@ function generateWeekDishes(){
   let best=null,bestSc=-1;
   for(let i=0;i<600;i++){const w=buildWeekOnce(intens);if(weekValid(w)){best=w;break;}const s=weekScore(w);if(s>bestSc){bestSc=s;best=w;}}
   S.weekDishes=best;S.dishesWeekKey=curWeekKey();return best;}
+/* ===== 5 COMBINACIONES SEMANALES (rotan; combo[0]=la actual) ===== */
+const DISH_COMBOS_DEF=[
+ {mon:{comida:10,cena:1},tue:{comida:6,cena:11},wed:{comida:14,cena:2},thu:{comida:15,cena:4},fri:{comida:3,cena:12},sat:{comida:16,cena:8},sun:{comida:1,cena:5}},
+ {mon:{comida:10,cena:11},tue:{comida:13,cena:1},wed:{comida:2,cena:14},thu:{comida:7,cena:15},fri:{comida:4,cena:12},sat:{comida:16,cena:3},sun:{comida:9,cena:5}},
+ {mon:{comida:10,cena:1},tue:{comida:3,cena:11},wed:{comida:14,cena:6},thu:{comida:5,cena:15},fri:{comida:8,cena:12},sat:{comida:16,cena:4},sun:{comida:1,cena:9}},
+ {mon:{comida:10,cena:6},tue:{comida:11,cena:3},wed:{comida:13,cena:2},thu:{comida:15,cena:4},fri:{comida:12,cena:8},sat:{comida:16,cena:1},sun:{comida:5,cena:9}},
+ {mon:{comida:10,cena:4},tue:{comida:11,cena:7},wed:{comida:14,cena:1},thu:{comida:15,cena:12},fri:{comida:3,cena:16},sat:{comida:8,cena:5},sun:{comida:1,cena:2}}
+];
+function comboDef(i){return (i===0&&S.combo0)?S.combo0:DISH_COMBOS_DEF[i];}
+function comboIndexFor(key){const ep=S.comboEpoch||curWeekKey();const w=Math.round((new Date(key+"T00:00:00")-new Date(ep+"T00:00:00"))/6048e5);return ((w%5)+5)%5;}
+function comboFor(key){return comboDef(comboIndexFor(key));}
+function dishRepair(id,wd,it){const d=dishById(id);if(d&&dishAllowed(d,wd,it))return id;
+  const cands=LIBRARY.filter(x=>dishAllowed(x,wd,it));if(!cands.length)return id;
+  const pick=(d&&cands.find(x=>x.prot===d.prot))||(d&&cands.find(x=>x.carb===d.carb))||cands.find(x=>x.comodin)||cands[0];return pick.id;}
+function ovGet(key,wd,slot){return S.dishOverrides&&S.dishOverrides[key]&&S.dishOverrides[key][wd]&&S.dishOverrides[key][wd][slot];}
 function defaultState(){
   const sched={};
   WD.forEach(d=>{sched[d]=[];});
@@ -652,6 +668,9 @@ function migrate(s){
   if(!s.weekPlans){s.weekPlans={};if(s.weekPlan&&s.weekPlan.days){const key=s.weekPlan.weekStart&&/^\d{4}-\d\d-\d\d$/.test(s.weekPlan.weekStart)?s.weekPlan.weekStart:ck;s.weekPlans[key]=s.weekPlan;}}
   if(!("dishesWeekKey" in s))s.dishesWeekKey=s.weekDishes?ck:null;
   if(s.libVersion!==2){s.weekDishes=null;s.dishesWeekKey=null;s.libVersion=2;}
+  if(!s.comboEpoch)s.comboEpoch=ck;
+  if(s.combo0===undefined){const wdk=s.weekDishes;const okSnap=wdk&&WD.every(wd=>wdk[wd]&&wdk[wd].comida&&wdk[wd].cena);s.combo0=okSnap?JSON.parse(JSON.stringify(wdk)):null;}
+  s.dishOverrides=s.dishOverrides||{};
   return s;
 }
 S=migrate(S);
@@ -924,7 +943,7 @@ function renderCfgDieta(){const wd=cfgDWd;const it=dayIntensity(wd);
 function renderCfgDietaSum(wd){const dm=dayRecipeMacros(wd);const goal=dayMacrosFor(wd);
   document.getElementById("cfgDietaSum").innerHTML=`<div class="r-s">Comida: <b>${esc(mealName(wd,'comida'))}</b></div><div class="r-s" style="margin-top:3px">Cena: <b>${esc(mealName(wd,'cena'))}</b></div><div class="r-s" style="margin-top:8px;color:var(--faint)">Día ≈ ${dm.kt} kcal · P${dm.P} C${dm.C} G${dm.F} (obj ${goal.kt})</div>`;}
 function cfgSetIntensity(wd,v){const k=curWeekKey();intensWeek(k)[wd]=v;const p=planFor(k);if(p&&p.days[wd])p.days[wd]={intensity:v,macros:dayMacros(p.planWeight,p.planGrasa,p.factor,v)};save();renderCfgDieta();toast("Intensidad actualizada");}
-function cfgSetDish(wd,slot,id){if(!S.weekDishes||S.dishesWeekKey!==curWeekKey())generateWeekDishes();S.weekDishes[wd]=S.weekDishes[wd]||{};S.weekDishes[wd][slot]=+id;save();renderCfgDieta();toast("Plato actualizado");}
+function cfgSetDish(wd,slot,id){const key=curWeekKey();S.dishOverrides=S.dishOverrides||{};(S.dishOverrides[key]=S.dishOverrides[key]||{})[wd]=S.dishOverrides[key][wd]||{};S.dishOverrides[key][wd][slot]=+id;save();renderCfgDieta();toast("Plato actualizado");}
 /* ===== REGISTRO DE ENTRENO ===== */
 let tf={type:""},tfDate=null,tfBlockKey=null,tfEditId=null;
 function tfSet(k,v){tf[k]=v;renderTrainForm();}
@@ -1461,7 +1480,7 @@ function renderComidaWeek(body){
     h+=`<div class="card" style="text-align:center;padding:30px 20px"><div style="font-size:30px;margin-bottom:10px">🍽️</div><div class="r-t" style="font-size:16px;margin-bottom:6px">No tienes una dieta asignada para esta semana</div><div class="note">Asigna la intensidad de cada día y guarda el plan en <b>Planificar</b> para ver aquí las comidas.</div><button class="btn teal" style="width:100%;margin-top:16px" onclick="nav('planificar');selIntWeek='${comidaWeek}';renderPlanificar()">Ir a Planificar</button></div>`;
     body.innerHTML=h;return;}
   if(!planFor(comidaWeek))h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan de esta semana en Planificar; muestro una estimación en vivo con tus intensidades.</div></div>';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div>'+(comidaWeek===curWeekKey()&&canEditWeek(curWeekKey())?'<button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button>':'')+'</div><div class="card flush">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div>'+((S.dishOverrides&&S.dishOverrides[comidaWeek])?'<button class="btn ghost sm" onclick="regenDishes()">↻ Restablecer platos</button>':'')+'</div><div class="card flush">';
   WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayRecipeMacros(wd);
     h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
@@ -1522,7 +1541,7 @@ function dishIngLine(x){
   let s=`<b>${x.g}</b> g ${x.n}`;
   if(RAWF[x.k])s+=` <span style="color:var(--faint)">· en crudo ≈ ${ceilTo(x.g*RAWF[x.k],5)} g</span>`;
   return s;}
-function regenDishes(){if(!canEditWeek(curWeekKey())){toast("Solo en Modo desarrollador para la semana en curso");return;}generateWeekDishes();save();toast("Platos de la semana regenerados");renderComida();}
+function regenDishes(){const key=dietKey();if(S.dishOverrides&&S.dishOverrides[key]){delete S.dishOverrides[key];save();}toast("Platos restablecidos a la combinación");renderComida();}
 function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk);const d=ENGINE.dayTypes[it];const sf=recipeScale(wd,it);
   const isDish=(mk==="comida"||mk==="cena");
   const items=mealItems(wd,mk,sf);const mm=mealMacrosFor(wd,mk,sf);
