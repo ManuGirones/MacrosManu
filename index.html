@@ -162,23 +162,28 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 .affect .a{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center;min-width:0;overflow:hidden}
 .affect .a .v{font-family:"Space Grotesk";font-weight:700;font-size:18px;color:var(--teal);font-variant-numeric:tabular-nums}
 .affect .a .u{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wkx-wrap{margin:0 -18px}
-.wkx-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:2px 18px 6px}
-.wkx-inner{position:relative}
-.wkx-head{position:relative;height:20px;margin-bottom:8px}
-.wkx-hr{position:absolute;top:0;font-size:11px;font-weight:600;color:var(--faint);transform:translateX(-50%);white-space:nowrap}
-.wkx-row{display:flex;align-items:center;height:60px}
-.wkx-daylab{position:sticky;left:18px;z-index:4;flex:0 0 38px;height:50px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--muted);background:var(--bg);border-radius:9px;margin-right:6px;box-shadow:6px 0 8px -4px var(--bg)}
-.wkx-daylab.today{color:var(--ember)}
-.wkx-track{position:relative;height:50px;border-radius:10px;background:var(--surface2)}
-.wkx-track.today{background:rgba(232,160,61,.07);box-shadow:inset 0 0 0 1px rgba(232,160,61,.25)}
-.wkx-seg{position:absolute;top:4px;bottom:4px;border-radius:8px;padding:5px 9px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,.32);display:flex;flex-direction:column;justify-content:center}
-.wkx-seg-t{font-size:13px;font-weight:700;color:#091318;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.18}
-.wkx-seg-h{font-size:11px;font-weight:600;color:rgba(9,19,24,.78);white-space:nowrap;overflow:hidden;line-height:1.18;margin-top:1px}
-.wkx-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--faint);letter-spacing:.06em}
-.wkx-legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:18px;justify-content:center}
-.wkx-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
-.wkx-dot{width:11px;height:11px;border-radius:4px}
+.cal-wrap{margin:0 -18px;padding:0 10px}
+.cal-head{display:flex;margin-bottom:4px}
+.cal-dh{flex:1;text-align:center;min-width:0}
+.cal-dh .d{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cal-dh .n{font-size:15px;font-weight:700;color:var(--ink);margin-top:2px;width:26px;height:26px;line-height:26px;border-radius:50%;display:inline-block}
+.cal-dh.today .d{color:var(--ember)}
+.cal-dh.today .n{background:var(--ember);color:#091318}
+.cal-bodyscroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;height:62vh;min-height:340px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.cal-body{position:relative}
+.cal-gutter{position:absolute;left:0;top:0;width:34px;height:100%}
+.cal-gutter span{position:absolute;right:5px;font-size:10px;color:var(--faint);transform:translateY(-50%)}
+.cal-cols{position:absolute;left:34px;right:0;top:0;height:100%;display:flex}
+.cal-col{flex:1;position:relative;border-left:1px solid var(--line);min-width:0}
+.cal-col.today{background:rgba(232,160,61,.06)}
+.cal-ev{position:absolute;left:1.5px;right:1.5px;border-radius:6px;padding:3px 4px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer}
+.cal-ev .t{font-size:9.5px;font-weight:700;color:#091318;line-height:1.12;overflow:hidden;word-break:break-word}
+.cal-ev .h{font-size:8.5px;font-weight:600;color:rgba(9,19,24,.72);line-height:1.1;margin-top:1px}
+.cal-now{position:absolute;left:34px;right:0;height:2px;background:var(--ember);z-index:6;pointer-events:none}
+.cal-now::before{content:"";position:absolute;left:-2px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--ember)}
+.cal-legend{display:flex;flex-wrap:wrap;gap:9px 14px;margin-top:16px;justify-content:center}
+.cal-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.cal-dot{width:11px;height:11px;border-radius:4px}
 .page-sec{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:20px 2px 8px}
 
 /* weigh modal */
@@ -351,7 +356,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.5";
+const APP_VERSION="3.6";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -1690,23 +1695,33 @@ function renderHoyUni(){const card=document.getElementById("hoyUniCard");const e
   el.innerHTML=h;}
 const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos",uni:"Universidad"};
 function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);
-  requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollLeft=6*WKX_HW-14;});}
-const WKX_HW=64;
+  requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollTop=6*WKX_HH-16;});}
+const WKX_HH=48;
 function renderWeekPreview(){
-  const key=curWeekKey(),today=todayKey(),HW=WKX_HW,TW=24*HW,LAB=44;
-  let head="";for(let hh=0;hh<=24;hh+=2)head+=`<span class="wkx-hr" style="left:${hh*HW}px">${hh}h</span>`;
-  const rows=WD.map(wd=>{const items=daySchedule(wd,key),isT=wd===today;let segs="";
-    items.forEach((it,i)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,i);if(e<=s)return;const left=s/1440*TW,width=(e-s)/1440*TW,col=typeColor(it.type),showH=width>=92;
-      segs+=`<div class="wkx-seg" style="left:${left}px;width:${width}px;background:linear-gradient(180deg,${col},${col}cc)" onclick="wkpSeg('${wd}',${i})"><div class="wkx-seg-t">${esc(blockName(it))}</div>${showH?`<div class="wkx-seg-h">${blkStart(it)}–${minHM(e)}</div>`:""}</div>`;});
-    if(!items.length)segs=`<div class="wkx-empty">libre</div>`;
-    return `<div class="wkx-row"><div class="wkx-daylab${isT?" today":""}">${WDLABEL[wd]}</div><div class="wkx-track${isT?" today":""}" style="width:${TW}px;background-image:repeating-linear-gradient(90deg,transparent 0 ${HW-1}px,rgba(255,255,255,.045) ${HW-1}px ${HW}px)">${segs}</div></div>`;
-  }).join("");
+  const key=curWeekKey(),todayK=todayKey(),HH=WKX_HH,BODY=24*HH;
+  const mon=new Date(key+"T00:00:00");
+  let head=`<div class="cal-dh" style="flex:0 0 34px"></div>`;
+  WD.forEach((wd,i)=>{const d=new Date(mon);d.setDate(d.getDate()+i);const isT=wd===todayK;
+    head+=`<div class="cal-dh${isT?" today":""}"><div class="d">${WDLABEL[wd]}</div><div class="n">${d.getDate()}</div></div>`;});
+  let gut="";for(let hh=0;hh<=24;hh+=2)gut+=`<span style="top:${hh*HH}px">${pad(hh)}</span>`;
+  let cols="";
+  WD.forEach((wd,i)=>{const items=daySchedule(wd,key),isT=wd===todayK;let evs="";
+    items.forEach((it,idx)=>{const s=toMin(blkStart(it)),e=resolveEndMin(items,idx);if(e<=s)return;const top=s/60*HH,hgt=Math.max(14,(e-s)/60*HH),col=typeColor(it.type),showH=hgt>=30;
+      evs+=`<div class="cal-ev" style="top:${top}px;height:${hgt-2}px;background:linear-gradient(180deg,${col},${col}d8)" onclick="wkpSeg('${wd}',${idx})"><div class="t">${esc(blockName(it))}</div>${showH?`<div class="h">${blkStart(it)}</div>`:""}</div>`;});
+    cols+=`<div class="cal-col${isT?" today":""}">${evs}</div>`;});
+  const D=new Date(),nm=D.getHours()*60+D.getMinutes();
+  const now=`<div class="cal-now" style="top:${nm/60*HH}px"></div>`;
   const types=[["train","Entreno"],["class","Clase"],["study","Estudiar"],["meal","Comidas"],["sleep","Dormir"],["other","Otros"]];
-  const leg=`<div class="wkx-legend">`+types.map(([t,l])=>`<span class="wkx-leg"><span class="wkx-dot" style="background:${typeColor(t)}"></span>${l}</span>`).join("")+`</div>`;
-  return `<div class="note" style="margin-bottom:12px">Semana ${weekLabel(key)} · desliza para ver las 24 h. Toca un bloque para su detalle.</div>
-    <div class="wkx-wrap"><div class="wkx-scroll" id="wkxScroll"><div class="wkx-inner" style="width:${LAB+TW}px">
-      <div class="wkx-head" style="margin-left:${LAB}px;width:${TW}px">${head}</div>${rows}
-    </div></div></div>${leg}`;
+  const leg=`<div class="cal-legend">`+types.map(([t,l])=>`<span class="cal-leg"><span class="cal-dot" style="background:${typeColor(t)}"></span>${l}</span>`).join("")+`</div>`;
+  return `<div class="note" style="margin-bottom:10px">Semana ${weekLabel(key)} · desliza arriba/abajo para ver las horas. Toca un bloque para su detalle.</div>
+  <div class="cal-wrap">
+    <div class="cal-head">${head}</div>
+    <div class="cal-bodyscroll" id="wkxScroll"><div class="cal-body" style="height:${BODY}px">
+      <div class="cal-gutter">${gut}</div>
+      <div class="cal-cols" style="background-image:repeating-linear-gradient(180deg,var(--line) 0 1px,transparent 1px ${HH}px)">${cols}</div>
+      ${now}
+    </div></div>
+  </div>${leg}`;
 }
 function wkpSeg(wd,i){const items=daySchedule(wd,curWeekKey());const it=items[i];if(!it)return;const e=resolveEndMin(items,i);toast(WDLABEL[wd]+" · "+blkStart(it)+"–"+minHM(e)+" · "+blockName(it));}
 function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
