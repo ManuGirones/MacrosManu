@@ -356,7 +356,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.6";
+const APP_VERSION="3.7";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -1273,8 +1273,8 @@ document.getElementById("weighLater").onclick=()=>{const used=(S.weighSnooze&&S.
   document.getElementById("weighScrim").classList.remove("show");toast(`Pospuesto 5 min (${used+1}/2)`);};
 
 /* ---------- HOY ---------- */
-function curType(){return dayIntensity(todayKey());}
-function todaysPlan(){const wd=todayKey();const it=dayIntensity(wd);const p=planFor(curWeekKey());let macros;
+function curType(){return dayIntensity(todayKey(),curWeekKey());}
+function todaysPlan(){const wd=todayKey();const it=dayIntensity(wd,curWeekKey());const p=planFor(curWeekKey());let macros;
   if(p&&p.days[wd])macros=p.days[wd].macros;else{const n=num(S.perfil);macros=dayMacros(ceilW(n.peso),n.grasa,n.factor,it);}
   const d=ENGINE.dayTypes[it]||ENGINE.dayTypes.moderado;return {intensity:it,label:d.label,color:d.c,macros};}
 function renderMacroRowVals(elId,m){document.getElementById(elId).innerHTML=`<div class="macro kc"><div class="v num">${m.kt}</div><div class="u">kcal</div></div><div class="macro p"><div class="v num">${m.P}</div><div class="u">prot g</div></div><div class="macro"><div class="v num">${m.C}</div><div class="u">carbo g</div></div><div class="macro"><div class="v num">${m.F}</div><div class="u">grasa g</div></div>`;}
@@ -1444,16 +1444,24 @@ document.getElementById("sAdd").onclick=()=>{if(!canEditWeek(selSchedWeek)){toas
   const w=schedWeek(selSchedWeek);(w[selWeekday]=w[selWeekday]||[]).push({start,end:isHM(end)?end:"",label,type});save();document.getElementById("sLabel").value="";renderSchedule();toast("Bloque añadido");};
 
 /* ---------- COMIDA (semana -> día -> receta) ---------- */
-let comidaWd=null;
-function dayIntensity(wd){const k=curWeekKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].intensity;return intensWeek(k)[wd]||"moderado";}
-function dayMacrosFor(wd){const k=curWeekKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].macros;const n=num(S.perfil);return dayMacros(ceilW(n.peso),n.grasa,n.factor,dayIntensity(wd));}
+let comidaWd=null,comidaWeek=null,DIETWK=null;
+function dietKey(){return DIETWK||curWeekKey();}
+function weekHasDiet(key){return !!planFor(key)||key===curWeekKey();}
+function dayIntensity(wd,key){const k=key||dietKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].intensity;return intensWeek(k)[wd]||"moderado";}
+function dayMacrosFor(wd,key){const k=key||dietKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].macros;const n=num(S.perfil);return dayMacros(ceilW(n.peso),n.grasa,n.factor,dayIntensity(wd,k));}
 function mealMacros(dm,i){const f=MEAL_SPLIT[i];return {kt:Math.round(dm.kt*f),P:Math.round(dm.P*f),C:Math.round(dm.C*f),F:Math.round(dm.F*f)};}
-function renderComida(){const body=document.getElementById("comidaBody");
+function renderComida(){if(!comidaWeek)comidaWeek=curWeekKey();DIETWK=comidaWeek;const body=document.getElementById("comidaBody");
   if(comidaWd)renderComidaDay(body,comidaWd);else renderComidaWeek(body);}
+function comidaWeekPills(){const weeks=[0,1,2,3,4].map(n=>weekKeyPlus(n));
+  return '<div class="card" style="margin-bottom:14px"><div class="label">Semana</div><div class="pills">'+weeks.map(k=>{const cur=k===curWeekKey();return `<button class="pill${k===comidaWeek?" on":""}" onclick="comidaWeek='${k}';comidaWd=null;renderComida();window.scrollTo(0,0)">${cur?"Actual":weekLabel(k)}</button>`;}).join("")+'</div>'+
+    `<div class="note" style="margin-top:8px">${comidaWeek===curWeekKey()?"Semana en curso "+weekLabel(comidaWeek)+".":"Semana "+weekLabel(comidaWeek)+"."}</div></div>`;}
 function renderComidaWeek(body){
-  let h="";
-  if(!planFor(curWeekKey()))h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan de esta semana en Planificar; muestro una estimación en vivo con tus intensidades.</div></div>';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div>'+(canEditWeek(curWeekKey())?'<button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button>':'')+'</div><div class="card flush">';
+  let h=comidaWeekPills();
+  if(!weekHasDiet(comidaWeek)){
+    h+=`<div class="card" style="text-align:center;padding:30px 20px"><div style="font-size:30px;margin-bottom:10px">🍽️</div><div class="r-t" style="font-size:16px;margin-bottom:6px">No tienes una dieta asignada para esta semana</div><div class="note">Asigna la intensidad de cada día y guarda el plan en <b>Planificar</b> para ver aquí las comidas.</div><button class="btn teal" style="width:100%;margin-top:16px" onclick="nav('planificar');selIntWeek='${comidaWeek}';renderPlanificar()">Ir a Planificar</button></div>`;
+    body.innerHTML=h;return;}
+  if(!planFor(comidaWeek))h+='<div class="card" style="margin-bottom:14px"><div class="note warn">Aún no has guardado el plan de esta semana en Planificar; muestro una estimación en vivo con tus intensidades.</div></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><div class="label" style="margin:0">La semana · toca un día</div>'+(comidaWeek===curWeekKey()&&canEditWeek(curWeekKey())?'<button class="btn ghost sm" onclick="regenDishes()">↻ Regenerar platos</button>':'')+'</div><div class="card flush">';
   WD.forEach(wd=>{const it=dayIntensity(wd);const d=ENGINE.dayTypes[it];const m=dayRecipeMacros(wd);
     h+=`<button class="mrow" style="width:100%" onclick="openComidaDay('${wd}')">
       <div class="r-t" style="flex:0 0 46px">${WDLABEL[wd]}</div>
@@ -1482,7 +1490,7 @@ function renderShopping(){
   const tot=weekShopping();
   const groups={};
   Object.keys(tot).forEach(k=>{let g=tot[k];if(RAWF[k])g=g*RAWF[k];const cat=SHOPCAT[k]||"Otros";(groups[cat]=groups[cat]||[]).push({k,g});});
-  let h=`<div class="note" style="margin-bottom:6px">Total a comprar para los 7 días de esta semana (${weekLabel(curWeekKey())}), según la intensidad y el plato de cada día. Pesos en crudo.</div>`;
+  let h=`<div class="note" style="margin-bottom:6px">Total a comprar para los 7 días de esta semana (${weekLabel(dietKey())}), según la intensidad y el plato de cada día. Pesos en crudo.</div>`;
   if(!Object.keys(tot).length){h+=`<div class="empty" style="padding:30px">Sin datos. Guarda el plan de la semana en Planificar.</div>`;document.getElementById("pageBody").innerHTML=h;return;}
   SHOP_ORDER.forEach(cat=>{const arr=groups[cat];if(!arr||!arr.length)return;
     arr.sort((a,b)=>(SHOPNAME[a.k]||a.k).localeCompare(SHOPNAME[b.k]||b.k));
@@ -1730,7 +1738,7 @@ function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classL
   document.getElementById("hEyebrow").textContent=v==="perfil"?"Mi plan":TITLES[v];
   document.getElementById("hTitle").textContent=TITLES[v];
   document.getElementById("hDate").textContent=v==="hoy"?dateStr():"";
-  if(v==="comida")comidaWd=null;
+  if(v==="comida"){comidaWd=null;comidaWeek=curWeekKey();}else{DIETWK=null;}
   ({perfil:renderPerfil,hoy:renderHoy,planificar:renderPlanificar,comida:renderComida,avisos:renderAvisos,uni:renderUni}[v])();window.scrollTo(0,0);}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>nav(t.dataset.v));
 function tick(){const d=new Date();document.getElementById("pClock").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
