@@ -233,6 +233,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
     <div class="card"><div class="label">Entrenos</div>
       <button class="btn sm teal" style="width:100%;margin-top:6px" onclick="openTrainForm({})">Registrar entreno</button>
       <div id="recentTrainings"></div></div>
+    <div class="card" id="hoyUniCard" style="display:none"><div class="label">Universidad</div><div id="hoyUni"></div></div>
   </section>
 
   <!-- PLANIFICAR -->
@@ -289,6 +290,11 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
       <button class="btn teal" id="bIcs" style="margin-top:12px">Generar calendario (.ics)</button>
       <div class="note" style="margin-top:10px">Ábrelo → "Añadir todo". Repítelo cuando cambies horarios.</div></div>
   </section>
+  <!-- UNI -->
+  <section class="view" id="v-uni">
+    <div class="pills" id="uniTabs"></div>
+    <div id="uniBody"></div>
+  </section>
 </main>
 
 <nav id="nav">
@@ -297,6 +303,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
   <button class="tab" data-v="planificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4M8 13h2M8 17h2M14 13h2"/></svg><span>Planificar</span></button>
   <button class="tab" data-v="comida"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v8M9 3v8M7 11v10M17 3c-2 0-3 2-3 5s1 4 3 4m0-9v18"/></svg><span>Comida</span></button>
   <button class="tab" data-v="avisos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.5 21a1.5 1.5 0 0 0 3 0"/></svg><span>Avisos</span></button>
+  <button class="tab" data-v="uni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg><span>Uni</span></button>
 </nav>
 
 <div class="scrim" id="scrim"></div>
@@ -326,7 +333,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,28,35,.
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="2.9";
+const APP_VERSION="3.2";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -580,8 +587,12 @@ function defaultState(){
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"06:00",label:"Pesarme en ayunas"}],
     trainings:[],bestMarks:{"500":null,"1000":null,"2000":{time:"6:19",secs:379,date:"2026-03-19"},"6000":null},trainDone:{},trainSnooze:{},
+    uni:defaultUni(),
     weighSnooze:null,lastWeigh:null,lastPlan:null};
 }
+function defaultUni(){const names=["Dret administratiu I","Dret de la persona","Dret dels contractes i de les obligacions","Introducció al dret constitucional","Introducció a la ciència política","Economia política","Introducció al dret processal","Dret romà","Història del dret i de les institucions","Teoria del dret"];
+  const courses=names.map(n=>({id:id(),name:n,ects:6}));const grades={};courses.forEach(c=>grades[c.id]=[]);
+  return {courses,items:[],grades,study:[],studyRun:null,cards:[]};}
 function id(){return Math.random().toString(36).slice(2,9);}
 let S=store.get()||defaultState();
 function migrate(s){
@@ -594,6 +605,8 @@ function migrate(s){
   if(typeof s.dev!=="boolean")s.dev=false;
   if(!("weighSnooze" in s))s.weighSnooze=null;
   if(!Array.isArray(s.trainings))s.trainings=[];
+  if(!s.uni||typeof s.uni!=="object")s.uni=defaultUni();
+  else{s.uni.courses=s.uni.courses||[];s.uni.items=s.uni.items||[];s.uni.grades=s.uni.grades||{};s.uni.study=s.uni.study||[];if(!("studyRun"in s.uni))s.uni.studyRun=null;s.uni.cards=s.uni.cards||[];}
   if(!s.bestMarks)s.bestMarks=JSON.parse(JSON.stringify(d.bestMarks));else ["500","1000","2000","6000"].forEach(k=>{if(!(k in s.bestMarks))s.bestMarks[k]=null;});
   if(!s.trainDone)s.trainDone={};
   if(!s.trainSnooze)s.trainSnooze={};
@@ -1256,6 +1269,7 @@ function renderHoy(){const tp=todaysPlan();
     el.innerHTML=`<div class="tl-time num">${s}–${minHM(e)}</div><div class="tl-label">${esc(blockName(it))}</div><div class="tl-sub">${it.type==="other"?typeLabel(it.type):""}</div>`;tl.appendChild(el);});
   updateCountdown();
   renderRecentTrainings();
+  renderHoyUni();
 }
 function updateCountdown(){
   const t=document.getElementById("nowTitle");if(!t)return;
@@ -1533,7 +1547,129 @@ document.getElementById("bIcs").onclick=()=>{let v=["BEGIN:VCALENDAR","VERSION:2
   v.push("END:VCALENDAR");dl(new Blob([v.join("\r\n")],{type:"text/calendar"}),"mi-plan.ics");toast("Calendario generado");};
 
 /* ---------- navegación + reloj ---------- */
-const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos"};
+/* ===== UNIVERSIDAD ===== */
+let uniSub="prox",uniReviewId=null,uniReviewShown=false,uniTimer=null;
+function uDaysUntil(iso){const t=new Date(isoToday()),d=new Date(iso);return Math.round((d-t)/86400000);}
+function uDatePlus(n){const d=new Date(isoToday());d.setDate(d.getDate()+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function uCourseOpts(){return '<option value="">— sin asignatura —</option>'+S.uni.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");}
+function courseNote(cid){const parts=(S.uni.grades[cid]||[]).filter(p=>p.nota!=null&&p.nota!=="");if(!parts.length)return null;let wsum=0,acc=0;parts.forEach(p=>{const w=_n(p.weight);acc+=w*_n(p.nota);wsum+=w;});return wsum?acc/wsum:null;}
+function renderUni(){
+  const subs=[["prox","Próximo"],["asig","Asignaturas"],["repaso","Repaso"],["estudio","Estudio"]];
+  document.getElementById("uniTabs").innerHTML=subs.map(([k,t])=>`<button class="pill${uniSub===k?" on":""}" onclick="uniSub='${k}';renderUni()">${t}</button>`).join("");
+  const b=document.getElementById("uniBody");
+  b.innerHTML=({prox:uniProx,asig:uniAsig,repaso:uniRepaso,estudio:uniEstudio}[uniSub])();
+  if(uniSub==="estudio")uniTickStart();else uniTickStop();
+}
+function uniProx(){
+  const items=(S.uni.items||[]).filter(i=>!i.done).sort((a,b)=>a.date<b.date?-1:1);
+  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday()).length;
+  let h=`<div class="card"><div class="label">Repaso de hoy</div>`+(due?`<div class="row" style="padding:8px 0;border-top:none"><div class="grow r-t">${due} tarjeta${due>1?"s":""} para repasar</div><button class="btn sm teal" style="width:auto;padding:0 16px" onclick="uniSub='repaso';renderUni()">Repasar</button></div>`:`<div class="note">Nada que repasar hoy. ✓</div>`)+`</div>`;
+  h+=`<div class="label" style="margin:14px 2px 6px">Exámenes y entregas</div>`;
+  if(!items.length)h+=`<div class="card"><div class="empty" style="padding:18px">Sin nada apuntado. Añádelo abajo.</div></div>`;
+  else h+=`<div class="card flush">`+items.map(i=>{const d=uDaysUntil(i.date);const c=S.uni.courses.find(x=>x.id===i.courseId);const cd=d<0?["#E5685F","vencido"]:d===0?["#E5685F","hoy"]:d<=3?["#E8A03D","faltan "+d+"d"]:["#3FC98B","faltan "+d+"d"];
+    return `<div class="row" style="padding:11px 16px"><div class="grow"><div class="r-t">${esc(i.title)} <span class="tag" style="margin-left:4px">${i.kind==="examen"?"Examen":"Entrega"}</span></div><div class="r-s" style="color:var(--faint)">${c?esc(c.name)+" · ":""}${fmtD(i.date)}${i.time?" · "+i.time:""}</div></div><span class="trendchip" style="background:${cd[0]}22;color:${cd[0]}">${cd[1]}</span><button class="btn-del" onclick="uniDelItem('${i.id}')">×</button></div>`;}).join("")+`</div>`;
+  h+=`<div class="card"><div class="label">Añadir examen / entrega</div>
+    <div class="field" style="margin-bottom:8px"><label>Título</label><input class="input" id="uiTitle" placeholder="Ej: Parcial temas 1-3"></div>
+    <div class="grid2"><div class="field" style="margin-bottom:8px"><label>Tipo</label><select class="input" id="uiKind"><option value="examen">Examen</option><option value="entrega">Entrega</option></select></div>
+    <div class="field" style="margin-bottom:8px"><label>Fecha</label><input class="input num" id="uiDate" type="date"></div></div>
+    <div class="field" style="margin-bottom:8px"><label>Asignatura</label><select class="input" id="uiCourse">${uCourseOpts()}</select></div>
+    <button class="btn teal" onclick="uniAddItem()">Añadir</button></div>`;
+  return h;
+}
+function uniAddItem(){const t=document.getElementById("uiTitle").value.trim(),date=document.getElementById("uiDate").value,kind=document.getElementById("uiKind").value,cid=document.getElementById("uiCourse").value;
+  if(!t){toast("Ponle un título");return;}if(!date){toast("Pon la fecha");return;}
+  S.uni.items.push({id:id(),courseId:cid||null,kind,title:t,date,done:false});save();renderUni();toast("Añadido");}
+function uniDelItem(iid){S.uni.items=S.uni.items.filter(x=>x.id!==iid);save();renderUni();}
+function uniAsig(){
+  const cs=S.uni.courses;
+  let h=`<div class="card flush">`+(cs.length?cs.map(c=>{const n=courseNote(c.id);return `<div class="row" style="padding:12px 16px" onclick="openUniCourse('${c.id}')"><div class="grow"><div class="r-t">${esc(c.name)}</div><div class="r-s" style="color:var(--faint)">${c.ects} ECTS</div></div><div class="num" style="font-weight:700;color:${n!=null?(n>=5?"var(--teal)":"var(--ember)"):"var(--faint)"}">${n!=null?fmt(n,2):"—"}</div><div style="color:var(--faint);font-size:18px;padding-left:6px">›</div></div>`;}).join(""):`<div class="empty" style="padding:18px">Sin asignaturas.</div>`)+`</div>`;
+  const notes=cs.map(c=>courseNote(c.id)).filter(n=>n!=null);
+  if(notes.length)h+=`<div class="card"><div class="row" style="border-top:none;padding:4px 0"><div class="grow r-t">Media provisional</div><div class="num" style="font-weight:700;font-size:19px;color:var(--ember)">${fmt(notes.reduce((a,b)=>a+b,0)/notes.length,2)}</div></div></div>`;
+  h+=`<div class="card"><div class="label">Añadir asignatura</div><div class="grid2" style="align-items:end"><div class="field" style="margin-bottom:0"><label>Nombre</label><input class="input" id="ucName" placeholder="Asignatura"></div><div class="field" style="margin-bottom:0"><label>ECTS</label><input class="input num" id="ucEcts" type="number" value="6"></div></div><button class="btn teal" style="margin-top:10px" onclick="uniAddCourse()">Añadir</button></div>`;
+  return h;
+}
+function uniAddCourse(){const n=document.getElementById("ucName").value.trim(),e=_n(document.getElementById("ucEcts").value)||6;if(!n){toast("Ponle nombre");return;}const cid=id();S.uni.courses.push({id:cid,name:n,ects:e});S.uni.grades[cid]=[];save();renderUni();toast("Asignatura añadida");}
+function openUniCourse(cid){const c=S.uni.courses.find(x=>x.id===cid);if(!c)return;statsActive=false;pageReturn=renderUni;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Uni";document.getElementById("pageTitle").textContent=c.name;
+  document.getElementById("pageBody").innerHTML=renderUniCourse(cid);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderUniCourse(cid){const parts=S.uni.grades[cid]||[];const n=courseNote(cid);const wsum=parts.reduce((a,p)=>a+_n(p.weight),0);
+  let h=`<div class="card" style="text-align:center"><div class="hero-val num" style="font-size:30px;color:${n!=null?(n>=5?"var(--teal)":"var(--ember)"):"var(--faint)"}">${n!=null?fmt(n,2):"—"}</div><div class="r-s" style="color:var(--faint)">nota${parts.length?" provisional":""} · pesos suman ${wsum}%</div></div>`;
+  h+=`<div class="label" style="margin:14px 2px 6px">Partes (parciales, prácticas…)</div><div class="card flush">`;
+  if(!parts.length)h+=`<div class="empty" style="padding:16px">Sin partes. Añade abajo.</div>`;
+  else h+=`<div class="row" style="padding:6px 16px;border-top:none"><div class="grow r-s" style="color:var(--faint)">Nombre</div><div class="r-s" style="flex:0 0 60px;text-align:center;color:var(--faint)">Peso %</div><div class="r-s" style="flex:0 0 60px;text-align:center;color:var(--faint)">Nota</div><div style="flex:0 0 24px"></div></div>`+parts.map(p=>`<div class="row" style="padding:8px 16px;gap:8px"><input class="input" value="${esc(p.name)}" onchange="uniSetPart('${cid}','${p.id}','name',this.value)" style="flex:1;min-width:0"><input class="input num" type="number" value="${p.weight}" onchange="uniSetPart('${cid}','${p.id}','weight',this.value)" style="flex:0 0 60px"><input class="input num" type="number" step="0.1" value="${p.nota!=null?p.nota:''}" onchange="uniSetPart('${cid}','${p.id}','nota',this.value)" style="flex:0 0 60px" placeholder="—"><button class="btn-del" onclick="uniDelPart('${cid}','${p.id}')">×</button></div>`).join("");
+  h+=`</div><button class="btn teal" style="margin-top:12px" onclick="uniAddPart('${cid}')">Añadir parte</button>`;
+  h+=`<button class="btn ghost" style="margin-top:8px;color:var(--danger)" onclick="uniDelCourse('${cid}')">Eliminar asignatura</button>`;
+  return h;}
+function uniSetPart(cid,pid,f,v){const p=(S.uni.grades[cid]||[]).find(x=>x.id===pid);if(!p)return;p[f]=(f==="name")?v:(v===""?(f==="nota"?null:0):_n(v));save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
+function uniAddPart(cid){(S.uni.grades[cid]=S.uni.grades[cid]||[]).push({id:id(),name:"Parte",weight:0,nota:null});save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
+function uniDelPart(cid,pid){S.uni.grades[cid]=(S.uni.grades[cid]||[]).filter(x=>x.id!==pid);save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
+function uniDelCourse(cid){if(!confirm("¿Eliminar la asignatura y sus notas?"))return;S.uni.courses=S.uni.courses.filter(x=>x.id!==cid);delete S.uni.grades[cid];save();closePage();}
+function uniRepaso(){
+  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday());
+  let h="";
+  if(due.length){
+    if(!uniReviewId||!due.find(c=>c.id===uniReviewId)){uniReviewId=due[0].id;uniReviewShown=false;}
+    const c=S.uni.cards.find(x=>x.id===uniReviewId);const co=S.uni.courses.find(x=>x.id===c.courseId);
+    h+=`<div class="card"><div class="r-s" style="color:var(--faint)">${due.length} por repasar${co?" · "+esc(co.name):""}</div>
+      <div class="r-t" style="font-size:17px;margin:12px 0;min-height:22px">${esc(c.front)}</div>`;
+    if(uniReviewShown){
+      if(c.back)h+=`<div class="divider"></div><div class="r-s" style="font-size:15px;color:var(--ink)">${esc(c.back)}</div>`;
+      h+=`<div class="grid2" style="margin-top:14px;gap:8px">
+        <button class="btn sm" style="background:#E5685F22;color:#E5685F;border-color:#E5685F55" onclick="uniGrade(0)">Otra vez</button>
+        <button class="btn sm" style="background:#E8A03D22;color:#E8A03D;border-color:#E8A03D55" onclick="uniGrade(1)">Difícil</button>
+        <button class="btn sm teal" onclick="uniGrade(2)">Bien</button>
+        <button class="btn sm" style="background:#3FC98B22;color:#3FC98B;border-color:#3FC98B55" onclick="uniGrade(3)">Fácil</button></div>`;
+    } else h+=`<button class="btn primary" style="margin-top:8px" onclick="uniReviewShown=true;renderUni()">Mostrar respuesta</button>`;
+    h+=`</div>`;
+  } else h+=`<div class="card"><div class="empty" style="padding:22px">Nada que repasar hoy. ✓</div></div>`;
+  h+=`<div class="card"><div class="label">Nueva tarjeta</div>
+    <div class="field" style="margin-bottom:8px"><label>Pregunta / tema (anverso)</label><textarea class="input" id="ucFront" rows="2"></textarea></div>
+    <div class="field" style="margin-bottom:8px"><label>Respuesta (reverso, opcional)</label><textarea class="input" id="ucBack" rows="2"></textarea></div>
+    <div class="field" style="margin-bottom:8px"><label>Asignatura</label><select class="input" id="ucCardCourse">${uCourseOpts()}</select></div>
+    <button class="btn teal" onclick="uniAddCard()">Añadir tarjeta</button></div>`;
+  const tot=(S.uni.cards||[]).length;if(tot)h+=`<div class="note" style="margin-top:6px;text-align:center">${tot} tarjeta${tot>1?"s":""} en total</div>`;
+  return h;
+}
+function uniAddCard(){const f=document.getElementById("ucFront").value.trim();if(!f){toast("Escribe la pregunta o tema");return;}const back=document.getElementById("ucBack").value.trim(),cid=document.getElementById("ucCardCourse").value;
+  S.uni.cards.push({id:id(),courseId:cid||null,front:f,back,ease:2.3,ivl:0,reps:0,due:isoToday()});save();renderUni();toast("Tarjeta añadida");}
+function uniGrade(q){const c=S.uni.cards.find(x=>x.id===uniReviewId);if(!c)return;
+  let ease=c.ease||2.3,ivl=c.ivl||0,reps=c.reps||0;
+  if(q===0){ease=Math.max(1.3,ease-0.2);ivl=0;reps=0;}
+  else{if(q===1){ease=Math.max(1.3,ease-0.15);ivl=reps===0?1:Math.max(1,Math.round(ivl*1.2));}
+    else if(q===2){ivl=reps===0?1:Math.max(1,Math.round(ivl*ease));}
+    else{ease=ease+0.15;ivl=reps===0?3:Math.max(1,Math.round(ivl*ease*1.3));}
+    reps++;}
+  c.ease=ease;c.ivl=ivl;c.reps=reps;c.due=uDatePlus(ivl);
+  uniReviewId=null;uniReviewShown=false;save();renderUni();}
+function uWeekStudy(){const since=daysAgoISO(6);const ss=(S.uni.study||[]).filter(s=>s.date>=since);let total=0;const byCourse={};ss.forEach(s=>{total+=_n(s.mins);if(s.courseId)byCourse[s.courseId]=(byCourse[s.courseId]||0)+_n(s.mins);});return {total,byCourse};}
+function uniElapsedStr(){if(!S.uni.studyRun)return "0:00";const s=Math.floor((Date.now()-S.uni.studyRun.startTs)/1000);return Math.floor(s/60)+":"+pad(s%60);}
+function uniTickStart(){uniTickStop();if(S.uni.studyRun)uniTimer=setInterval(()=>{const el=document.getElementById("uniElapsed");if(el)el.textContent=uniElapsedStr();else uniTickStop();},1000);}
+function uniTickStop(){if(uniTimer){clearInterval(uniTimer);uniTimer=null;}}
+function uniEstudio(){
+  let h="";
+  if(S.uni.studyRun){const co=S.uni.courses.find(x=>x.id===S.uni.studyRun.courseId);
+    h+=`<div class="card" style="text-align:center"><div class="r-s" style="color:var(--faint)">Estudiando${co?" · "+esc(co.name):""}</div><div class="num" id="uniElapsed" style="font-size:40px;font-weight:800;color:var(--ember);margin:8px 0">${uniElapsedStr()}</div><button class="btn primary" onclick="uniStopStudy()">Parar y guardar</button><button class="btn ghost sm" style="width:100%;margin-top:8px;color:var(--faint)" onclick="uniCancelStudy()">Cancelar</button></div>`;
+  } else {
+    h+=`<div class="card"><div class="label">Empezar a estudiar</div><div class="field" style="margin-bottom:10px"><label>Asignatura</label><select class="input" id="usCourse">${uCourseOpts()}</select></div><button class="btn teal" onclick="uniStartStudy()">Empezar cronómetro</button>
+    <div class="divider"></div><div class="label">Registrar minutos a mano</div><div class="grid2" style="align-items:end"><div class="field" style="margin-bottom:0"><label>Minutos</label><input class="input num" id="usMin" type="number" placeholder="min"></div><button class="btn" onclick="uniLogManual()">Añadir</button></div></div>`;
+  }
+  const wk=uWeekStudy();h+=`<div class="label" style="margin:14px 2px 6px">Esta semana</div><div class="card flush">`+srow("Total estudiado",durFmt(wk.total*60))+Object.keys(wk.byCourse).map(cid=>{const c=S.uni.courses.find(x=>x.id===cid);return srow(c?c.name:"(sin asignatura)",durFmt(wk.byCourse[cid]*60));}).join("")+`</div>`;
+  return h;
+}
+function uniStartStudy(){const cid=document.getElementById("usCourse").value;S.uni.studyRun={courseId:cid||null,startTs:Date.now()};save();renderUni();}
+function uniStopStudy(){if(!S.uni.studyRun)return;const mins=Math.round((Date.now()-S.uni.studyRun.startTs)/60000);const cid=S.uni.studyRun.courseId;S.uni.studyRun=null;
+  if(mins>=1){S.uni.study.push({id:id(),courseId:cid,date:isoToday(),mins});toast("Registrados "+mins+" min");}else toast("Sesión muy corta, no se guarda");save();renderUni();}
+function uniCancelStudy(){S.uni.studyRun=null;save();renderUni();}
+function uniLogManual(){const m=Math.round(_n(document.getElementById("usMin").value));if(m<1){toast("Pon los minutos");return;}S.uni.study.push({id:id(),courseId:null,date:isoToday(),mins:m});save();renderUni();toast("Registrados "+m+" min");}
+function renderHoyUni(){const card=document.getElementById("hoyUniCard");const el=document.getElementById("hoyUni");if(!card||!el)return;
+  const items=(S.uni.items||[]).filter(i=>!i.done).sort((a,b)=>a.date<b.date?-1:1);
+  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday()).length;
+  if(!items.length&&!due){card.style.display="none";return;}
+  card.style.display="block";let h="";
+  if(due)h+=`<div class="row" style="border-top:none;padding:6px 0"><div class="grow r-t">${due} repaso${due>1?"s":""} pendiente${due>1?"s":""}</div><button class="btn sm teal" style="width:auto;padding:0 14px" onclick="nav('uni');uniSub='repaso';renderUni()">Repasar</button></div>`;
+  items.slice(0,2).forEach(i=>{const d=uDaysUntil(i.date);const lab=d<0?"vencido":d===0?"hoy":"faltan "+d+"d";h+=`<div class="row" style="padding:6px 0"><div class="grow"><div class="r-t">${esc(i.title)}</div><div class="r-s" style="color:var(--faint)">${i.kind==="examen"?"Examen":"Entrega"} · ${fmtD(i.date)}</div></div><div class="r-s" style="color:var(--ember);font-weight:600">${lab}</div></div>`;});
+  el.innerHTML=h;}
+const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos",uni:"Universidad"};
 function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
   document.getElementById("v-"+v).classList.add("active");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
@@ -1541,7 +1677,7 @@ function nav(v){curView=v;document.querySelectorAll(".view").forEach(x=>x.classL
   document.getElementById("hTitle").textContent=TITLES[v];
   document.getElementById("hDate").textContent=v==="hoy"?dateStr():"";
   if(v==="comida")comidaWd=null;
-  ({perfil:renderPerfil,hoy:renderHoy,planificar:renderPlanificar,comida:renderComida,avisos:renderAvisos}[v])();window.scrollTo(0,0);}
+  ({perfil:renderPerfil,hoy:renderHoy,planificar:renderPlanificar,comida:renderComida,avisos:renderAvisos,uni:renderUni}[v])();window.scrollTo(0,0);}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>nav(t.dataset.v));
 function tick(){const d=new Date();document.getElementById("pClock").textContent=pad(d.getHours())+":"+pad(d.getMinutes());
   document.getElementById("pDate").textContent=dateStr();}
