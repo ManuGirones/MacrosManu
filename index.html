@@ -184,6 +184,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 .cal-legend{display:flex;flex-wrap:wrap;gap:9px 14px;margin-top:16px;justify-content:center}
 .cal-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .cal-dot{width:11px;height:11px;border-radius:4px}
+.pomo-phase{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;margin-top:6px}
 .page-sec{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:20px 2px 8px}
 
 /* weigh modal */
@@ -356,7 +357,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.8";
+const APP_VERSION="3.9";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -631,7 +632,7 @@ function defaultState(){
 }
 function defaultUni(){const names=["Dret administratiu I","Dret de la persona","Dret dels contractes i de les obligacions","Introducció al dret constitucional","Introducció a la ciència política","Economia política","Introducció al dret processal","Dret romà","Història del dret i de les institucions","Teoria del dret"];
   const courses=names.map(n=>({id:id(),name:n,ects:6}));const grades={};courses.forEach(c=>grades[c.id]=[]);
-  return {courses,items:[],grades,study:[],studyRun:null,cards:[]};}
+  return {courses,items:[],grades,study:[],pomo:null,cards:[]};}
 function id(){return Math.random().toString(36).slice(2,9);}
 let S=store.get()||defaultState();
 function migrate(s){
@@ -645,7 +646,7 @@ function migrate(s){
   if(!("weighSnooze" in s))s.weighSnooze=null;
   if(!Array.isArray(s.trainings))s.trainings=[];
   if(!s.uni||typeof s.uni!=="object")s.uni=defaultUni();
-  else{s.uni.courses=s.uni.courses||[];s.uni.items=s.uni.items||[];s.uni.grades=s.uni.grades||{};s.uni.study=s.uni.study||[];if(!("studyRun"in s.uni))s.uni.studyRun=null;s.uni.cards=s.uni.cards||[];}
+  else{s.uni.courses=s.uni.courses||[];s.uni.items=s.uni.items||[];s.uni.grades=s.uni.grades||{};s.uni.study=s.uni.study||[];if(!("pomo"in s.uni))s.uni.pomo=null;delete s.uni.studyRun;s.uni.cards=s.uni.cards||[];}
   if(!s.bestMarks)s.bestMarks=JSON.parse(JSON.stringify(d.bestMarks));else ["500","1000","2000","6000"].forEach(k=>{if(!(k in s.bestMarks))s.bestMarks[k]=null;});
   if(!s.trainDone)s.trainDone={};
   if(!s.trainSnooze)s.trainSnooze={};
@@ -1692,26 +1693,64 @@ function uniGrade(q){const c=S.uni.cards.find(x=>x.id===uniReviewId);if(!c)retur
     reps++;}
   c.ease=ease;c.ivl=ivl;c.reps=reps;c.due=uDatePlus(ivl);
   uniReviewId=null;uniReviewShown=false;save();renderUni();}
-function uWeekStudy(){const since=daysAgoISO(6);const ss=(S.uni.study||[]).filter(s=>s.date>=since);let total=0;const byCourse={};ss.forEach(s=>{total+=_n(s.mins);if(s.courseId)byCourse[s.courseId]=(byCourse[s.courseId]||0)+_n(s.mins);});return {total,byCourse};}
-function uniElapsedStr(){if(!S.uni.studyRun)return "0:00";const s=Math.floor((Date.now()-S.uni.studyRun.startTs)/1000);return Math.floor(s/60)+":"+pad(s%60);}
-function uniTickStart(){uniTickStop();if(S.uni.studyRun)uniTimer=setInterval(()=>{const el=document.getElementById("uniElapsed");if(el)el.textContent=uniElapsedStr();else uniTickStop();},1000);}
+const POMO={"50":{study:50,brk:10,maxExtra:4},"25":{study:25,brk:5,maxExtra:2}};
+function pomoMs(min){return min*60000;}
+function pomoRemain(){const p=S.uni.pomo;return p?Math.max(0,p.endTs-Date.now()):0;}
+function pomoClock(){const r=Math.round(pomoRemain()/1000);return pad(Math.floor(r/60))+":"+pad(r%60);}
+function pomoStudiedTotal(){const p=S.uni.pomo;if(!p)return 0;let s=p.studiedMs||0;if(p.phase==="study"&&p.studyStartTs)s+=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0);return s;}
+function pomoAdvance(){const p=S.uni.pomo;if(!p)return;const cfg=POMO[p.type];
+  if(p.phase==="study"){p.studiedMs=(p.studiedMs||0)+(p.blockBudgetMs||pomoMs(cfg.study));p.studyStartTs=null;p.cycles=(p.cycles||0)+1;p.phase="break";p.endTs=Date.now()+pomoMs(cfg.brk);}
+  else if(p.phase==="break"){p.phase="study";p.studyStartTs=Date.now();p.blockBudgetMs=pomoMs(cfg.study);p.endTs=Date.now()+pomoMs(cfg.study);}
+  else if(p.phase==="mbreak"){const rem=p.resumeMs||pomoMs(cfg.study);p.phase="study";p.studyStartTs=Date.now();p.blockBudgetMs=rem;p.endTs=Date.now()+rem;p.resumeMs=0;}
+  save();}
+function pomoTick(){const p=S.uni.pomo;if(!p){uniTickStop();return;}
+  if(Date.now()>=p.endTs){pomoAdvance();renderUni();return;}
+  const t=document.getElementById("pomoTime");if(t)t.textContent=pomoClock();else uniTickStop();}
+function uniTickStart(){uniTickStop();if(S.uni.pomo)uniTimer=setInterval(pomoTick,1000);}
 function uniTickStop(){if(uniTimer){clearInterval(uniTimer);uniTimer=null;}}
+function pomoStart(){const cid=document.getElementById("usCourse").value,mode=document.getElementById("usMode").value,type=document.getElementById("usType").value,cfg=POMO[type];
+  S.uni.pomo={courseId:cid||null,mode,type,phase:"study",studyStartTs:Date.now(),blockBudgetMs:pomoMs(cfg.study),endTs:Date.now()+pomoMs(cfg.study),studiedMs:0,resumeMs:0,cycles:0,extraBreaks:0};save();renderUni();}
+function pomoBreak5(){const p=S.uni.pomo;if(!p||p.phase!=="study")return;const cfg=POMO[p.type];if((p.extraBreaks||0)>=cfg.maxExtra){toast("No quedan descansos");return;}
+  const elapsed=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0);p.studiedMs=(p.studiedMs||0)+elapsed;p.resumeMs=Math.max(0,(p.blockBudgetMs||0)-elapsed);
+  p.studyStartTs=null;p.extraBreaks=(p.extraBreaks||0)+1;p.phase="mbreak";p.endTs=Date.now()+pomoMs(5);save();renderUni();}
+function pomoEnd(){const p=S.uni.pomo;if(!p)return;const mins=Math.round(pomoStudiedTotal()/60000),cid=p.courseId,mode=p.mode;S.uni.pomo=null;
+  if(mins>=1){S.uni.study.push({id:id(),courseId:cid,mode,date:isoToday(),mins});toast("Sesión guardada: "+mins+" min");}else toast("Sesión muy corta, no se guarda");save();renderUni();}
 function uniEstudio(){
-  let h="";
-  if(S.uni.studyRun){const co=S.uni.courses.find(x=>x.id===S.uni.studyRun.courseId);
-    h+=`<div class="card" style="text-align:center"><div class="r-s" style="color:var(--faint)">Estudiando${co?" · "+esc(co.name):""}</div><div class="num" id="uniElapsed" style="font-size:40px;font-weight:800;color:var(--ember);margin:8px 0">${uniElapsedStr()}</div><button class="btn primary" onclick="uniStopStudy()">Parar y guardar</button><button class="btn ghost sm" style="width:100%;margin-top:8px;color:var(--faint)" onclick="uniCancelStudy()">Cancelar</button></div>`;
+  const p=S.uni.pomo;let h="";
+  if(p){const cfg=POMO[p.type],co=S.uni.courses.find(x=>x.id===p.courseId),isStudy=p.phase==="study";
+    const phaseLab=isStudy?"Estudiando":(p.phase==="mbreak"?"Descanso (5 min)":"Descanso");const col=isStudy?"var(--ember)":"var(--teal)";
+    h+=`<div class="card" style="text-align:center">
+      <div class="r-s" style="color:var(--faint)">${esc(co?co.name:"Sin asignatura")} · ${p.mode==="memorizar"?"Memorizar":"Resumir"} · ${p.type==="50"?"50/10":"25/5"}</div>
+      <div class="pomo-phase" style="color:${col}">${phaseLab}</div>
+      <div class="num" id="pomoTime" style="font-size:56px;font-weight:800;color:${col};margin:2px 0 6px;font-variant-numeric:tabular-nums">${pomoClock()}</div>
+      <div class="r-s" style="color:var(--faint)">Pomodoros completados: <b style="color:var(--ink)">${p.cycles||0}</b></div>`;
+    if(isStudy){const left=cfg.maxExtra-(p.extraBreaks||0);
+      h+=left>0?`<button class="btn teal" style="margin-top:14px" onclick="pomoBreak5()">Tomar descanso de 5 min (${left} disp.)</button>`:`<button class="btn ghost" style="margin-top:14px;opacity:.45" disabled>Sin descansos de 5 disponibles</button>`;}
+    h+=`<button class="btn primary" style="margin-top:8px" onclick="pomoEnd()">Acabar estudio</button></div>`;
   } else {
-    h+=`<div class="card"><div class="label">Empezar a estudiar</div><div class="field" style="margin-bottom:10px"><label>Asignatura</label><select class="input" id="usCourse">${uCourseOpts()}</select></div><button class="btn teal" onclick="uniStartStudy()">Empezar cronómetro</button>
-    <div class="divider"></div><div class="label">Registrar minutos a mano</div><div class="grid2" style="align-items:end"><div class="field" style="margin-bottom:0"><label>Minutos</label><input class="input num" id="usMin" type="number" placeholder="min"></div><button class="btn" onclick="uniLogManual()">Añadir</button></div></div>`;
+    h+=`<div class="card"><div class="label">Empezar a estudiar</div>
+      <div class="field" style="margin-bottom:10px"><label>Asignatura</label><select class="input" id="usCourse">${uCourseOpts()}</select></div>
+      <div class="grid2"><div class="field" style="margin-bottom:10px"><label>Tipo de estudio</label><select class="input" id="usMode"><option value="memorizar">Memorizar</option><option value="resumir">Resumir</option></select></div>
+      <div class="field" style="margin-bottom:10px"><label>Pomodoro</label><select class="input" id="usType"><option value="50">50 / 10</option><option value="25">25 / 5</option></select></div></div>
+      <button class="btn teal" onclick="pomoStart()">Empezar estudio</button></div>`;
   }
-  const wk=uWeekStudy();h+=`<div class="label" style="margin:14px 2px 6px">Esta semana</div><div class="card flush">`+srow("Total estudiado",durFmt(wk.total*60))+Object.keys(wk.byCourse).map(cid=>{const c=S.uni.courses.find(x=>x.id===cid);return srow(c?c.name:"(sin asignatura)",durFmt(wk.byCourse[cid]*60));}).join("")+`</div>`;
+  h+=`<button class="btn" style="width:100%;margin-top:14px" onclick="openStudyStats()">📊 Estadísticas de estudio</button>`;
   return h;
 }
-function uniStartStudy(){const cid=document.getElementById("usCourse").value;S.uni.studyRun={courseId:cid||null,startTs:Date.now()};save();renderUni();}
-function uniStopStudy(){if(!S.uni.studyRun)return;const mins=Math.round((Date.now()-S.uni.studyRun.startTs)/60000);const cid=S.uni.studyRun.courseId;S.uni.studyRun=null;
-  if(mins>=1){S.uni.study.push({id:id(),courseId:cid,date:isoToday(),mins});toast("Registrados "+mins+" min");}else toast("Sesión muy corta, no se guarda");save();renderUni();}
-function uniCancelStudy(){S.uni.studyRun=null;save();renderUni();}
-function uniLogManual(){const m=Math.round(_n(document.getElementById("usMin").value));if(m<1){toast("Pon los minutos");return;}S.uni.study.push({id:id(),courseId:null,date:isoToday(),mins:m});save();renderUni();toast("Registrados "+m+" min");}
+function studyTotals(cid){const ss=(S.uni.study||[]).filter(s=>!cid||s.courseId===cid);let total=0,mem=0,res=0;ss.forEach(s=>{const m=_n(s.mins);total+=m;if(s.mode==="memorizar")mem+=m;else if(s.mode==="resumir")res+=m;});return {total,mem,res};}
+function openStudyStats(){pageReturn=renderUni;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Uni";document.getElementById("pageTitle").textContent="Estadísticas de estudio";document.getElementById("pageBody").innerHTML=renderStudyStats();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderStudyStats(){const t=studyTotals(null);
+  let h=`<div class="card flush">`+srow("Tiempo total de estudio",durFmt(t.total*60))+srow("Memorizando",durFmt(t.mem*60))+srow("Resumiendo",durFmt(t.res*60))+`</div>`;
+  h+=`<div class="label" style="margin:16px 2px 6px">Por asignatura</div>`;
+  const cs=S.uni.courses.filter(c=>studyTotals(c.id).total>0);
+  if(!cs.length)h+=`<div class="card"><div class="empty" style="padding:18px">Aún no has registrado estudio. Empieza un pomodoro.</div></div>`;
+  else h+=`<div class="card flush">`+cs.map(c=>{const ct=studyTotals(c.id);return `<button class="mrow" style="width:100%" onclick="openStudyStatsCourse('${c.id}')"><div class="grow r-t">${esc(c.name)}</div><span class="m-prev"><span class="m-val num">${durFmt(ct.total*60)}</span><span class="chev">›</span></span></button>`;}).join("")+`</div>`;
+  return h;
+}
+function openStudyStatsCourse(cid){const c=S.uni.courses.find(x=>x.id===cid);if(!c)return;pageReturn=openStudyStats;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Estadísticas";document.getElementById("pageTitle").textContent=c.name;document.getElementById("pageBody").innerHTML=renderStudyStatsCourse(cid);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
+function renderStudyStatsCourse(cid){const t=studyTotals(cid),n=(S.uni.study||[]).filter(s=>s.courseId===cid).length;
+  return `<div class="card flush">`+srow("Tiempo total",durFmt(t.total*60))+srow("Memorizando",durFmt(t.mem*60))+srow("Resumiendo",durFmt(t.res*60))+srow("Sesiones",String(n))+`</div>`;
+}
 function renderHoyUni(){const card=document.getElementById("hoyUniCard");const el=document.getElementById("hoyUni");if(!card||!el)return;
   const items=(S.uni.items||[]).filter(i=>!i.done).sort((a,b)=>a.date<b.date?-1:1);
   const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday()).length;
