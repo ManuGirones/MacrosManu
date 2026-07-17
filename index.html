@@ -258,6 +258,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
       <button class="btn sm teal" style="width:100%;margin-top:6px" onclick="openTrainForm({})">Registrar entreno</button>
       <div id="recentTrainings"></div></div>
     <div class="card" id="hoyUniCard" style="display:none"><div class="label">Universidad</div><div id="hoyUni"></div></div>
+    <div class="card" id="hoySuplCard" style="display:none"><div class="label">Suplementos de hoy</div><div id="hoySupl"></div></div>
   </section>
 
   <!-- PLANIFICAR -->
@@ -269,6 +270,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
       <div class="label">Intensidad de la semana</div>
       <div id="intensSummary" class="affect" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px"></div>
       <div id="intensDays"></div>
+      <div id="trainShiftBox" style="margin-top:14px"></div>
       <div class="divider"></div>
       <div class="row" style="border-top:none;padding:4px 0"><div class="grow"><div class="r-t">Peso de planificación</div><div class="r-s" id="planWeightNote"></div></div><div class="num" id="planWeightVal" style="font-weight:700;font-size:19px"></div></div>
       <button class="btn primary" id="savePlanBtn" style="margin-top:10px">Calcular y guardar plan</button>
@@ -357,7 +359,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="3.9";
+const APP_VERSION="4.6";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -436,17 +438,17 @@ const RECIPES_DEFAULT={
  }
 };
 const STEP_BY_MEAL={
- desayuno:"LA NOCHE DE ANTES:\n1) Coge un bote o táper con tapa.\n2) Echa dentro la avena, la leche y el yogur griego. Si la receta lleva miel, échala también. En competición añade también el whey.\n3) Remueve bien con una cuchara hasta que esté todo mezclado.\n4) Tapa y mételo en la nevera toda la noche (mínimo 4 horas). NO se cocina nada: la avena se ablanda sola.\n\nPOR LA MAÑANA:\n5) Saca el bote. Pela el plátano y córtalo en rodajas por encima.\n6) Si lleva manzana, córtala en daditos y échala. Parte las nueces con la mano y espárcelas.\n7) Listo para comer, frío. (Si lo quieres caliente: caliéntalo 1,5–2 min en el microondas ANTES de poner la fruta.)",
+ desayuno:"POR LA MAÑANA (2 minutos, nada la noche antes):\n1) Coge un bol grande.\n2) Echa los corn flakes y añade la leche fría por encima.\n3) En un lado del bol (o en un vasito aparte) pon el yogur griego. Si la receta lleva miel, échala sobre el yogur. En competición añade también el whey al yogur y remueve.\n4) Pela el plátano y córtalo en rodajas por encima. Si lleva manzana, en daditos.\n5) Parte las nueces con la mano y espárcelas.\n6) A comer ya, antes de que los corn flakes se ablanden.\n\nTIP: si prefieres los corn flakes crujientes hasta el final, come primero el yogur con la fruta y deja la leche con cereales para el final.",
  media:"EN EL MOMENTO (o lo dejas hecho y a la nevera):\n1) Coge un táper o un bol.\n2) Echa el skyr.\n3) Pela el plátano y córtalo en rodajas encima. Si lleva manzana, córtala en daditos y añádela.\n4) Echa la miel por encima (si la lleva) y las nueces partidas con la mano.\n5) Si la receta lleva avena cruda, espárcela por encima al final (da un toque crujiente).\n6) Tapa y guárdalo en la nevera hasta que te lo comas. No hay que cocinar nada.",
  comida:"VERSIÓN EXPRÉS (5 min, sin horno) — recomendada entre semana:\n1) Calienta arroz de bolsa de microondas (90 seg) o ten arroz ya cocido de la nevera.\n2) Proteína sin cocinar: escurre una lata de atún al natural, o pollo ya asado de bolsa. (≈ mismos gramos que la receta; el atún tiene algo menos de proteína, así que ponle un pelín más.)\n3) Verdura congelada al microondas 3-4 min, o ensalada de bolsa.\n4) Júntalo, echa el aceite y de postre la fruta. Listo.\n\nVERSIÓN AL HORNO (si tienes tiempo):\n1) Horno 200°C. Pon el pollo con sal y la mitad del aceite, verdura alrededor. Hornea 20-25 min (blanco por dentro, nada rosa).\n2) Cuece el arroz en agua con sal los minutos del paquete y escúrrelo.\n3) Sirve con el resto del aceite y la fruta.\n\nTIP: el domingo veremos cómo dejar arroz y proteína cocinados para toda la semana.",
  merienda:"EN EL MOMENTO (o lo dejas hecho de antes):\n1) Coge la batidora de vaso (o un vaso alto con batidora de mano).\n2) Echa dentro: la leche, la avena, el skyr (o el whey si lo lleva), la miel (si la lleva) y el plátano pelado y troceado.\n3) Tritura 30–60 segundos hasta que quede espeso y sin grumos.\n4) Pásalo a una botella o táper.\n5) Tómalo antes del entreno de las 18:00. Si lo quieres más llenador, ponle un poco menos de leche. Si lo dejaste hecho, remueve antes.\n\nTIP: déjalo hecho por la mañana en la botella y al sacarlo del frigo solo agítalo.",
  cena:"VERSIÓN EXPRÉS (5 min, sin horno) — recomendada entre semana:\n1) Patata: usa una bolsa de patata para microondas (5-6 min) o patata ya cocida.\n2) Pescado sin cocinar: una lata de caballa, sardinas o atún (al natural o en aceite de oliva escurrido). Cero cocción. (Ajusta un poco la cantidad: la caballa/sardina tienen más grasa, así que baja el aceite añadido.)\n3) Verdura congelada al microondas o ensalada de bolsa.\n4) Junta, echa el aceite que toque y la fruta de postre.\n\nVERSIÓN AL HORNO/PLANCHA (si tienes tiempo):\n1) Patata en rodajas con sal y la mitad del aceite, horno 200°C 15 min; añade la merluza encima 12-15 min.\n2) O más rápido: patata cocida en agua 15-18 min + merluza a la plancha 3-4 min por lado.\n\nTIP: tener latas de pescado y bolsas de arroz/patata de microondas en casa es lo que más tiempo te ahorra."
 };
 function buildSteps(){const o={};INTENS.forEach(it=>{o[it]={};MEALKEYS.forEach(mk=>{o[it][mk]=STEP_BY_MEAL[mk];});});return o;}
-const RECIPE_NAME={desayuno:"Overnight oats",media:"Bowl de skyr",comida:"Pollo + arroz + verdura",merienda:"Batido de avena",cena:"Merluza + patata"};
+const RECIPE_NAME={desayuno:"Corn flakes con yogur y fruta",media:"Bowl de skyr",comida:"Pollo + arroz + verdura",merienda:"Batido de avena",cena:"Merluza + patata"};
 const UNIT_PLURAL={"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"],"huevo":["huevo","huevos"]};
 // ingredientes base a 81,5 kg. t: "g"(def)/"ml"/"u"(unidad fija). u: gramos por unidad.
-const FOOD={avena:[380,13,60,7],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],boniato:[90,1.6,20,0.1],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],tomate:[80,1.5,9,4],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
+const FOOD={avena:[380,13,60,7],cornflakes:[378,7,84,0.9],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],boniato:[90,1.6,20,0.1],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],tomate:[80,1.5,9,4],verdura:[35,2,6,0.3],aceite:[884,0,0,100]};
 const RAWF={arroz:0.37,pasta:0.42,patata:1.05,boniato:1.05,pollo:1.43,pavo:1.43,ternera:1.4,salmon:1.25,merluza:1.25,cerdo:1.4};
 const FLOORG={pollo:70,pavo:70,ternera:80,merluza:95,salmon:95,cerdo:80,atun:80,huevo:150,lentejas:200,garbanzos:180};
 const FOODNAME={arroz:"arroz cocido",pasta:"pasta cocida",patata:"patata cocida",boniato:"boniato",pollo:"pollo (cocido)",pavo:"pavo (cocido)",ternera:"ternera magra (cocida)",salmon:"salmón (cocido)",merluza:"merluza (cocida)",cerdo:"lomo de cerdo (cocido)",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas cocidas",garbanzos:"garbanzos cocidos",tomate:"tomate/sofrito",verdura:"verdura"};
@@ -489,35 +491,35 @@ function batchSteps(d){
   return t;}
 const RECIPES_ING={
  descanso:{
-  desayuno:[{n:"avena",k:"avena",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:170},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
+  desayuno:[{n:"corn flakes",k:"cornflakes",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:170},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
   media:[{n:"skyr",k:"skyr",g:180},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:10},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
   comida:[{n:"pollo (cocido)",k:"pollo",g:115},{n:"arroz cocido",k:"arroz",g:170},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:26},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
   merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"skyr",k:"skyr",g:130},{n:"miel",k:"miel",g:5}],
   cena:[{n:"merluza",k:"merluza",g:175},{n:"patata cocida",k:"patata",g:120},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:20},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
  },
  suave:{
-  desayuno:[{n:"avena",k:"avena",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:190},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:20},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  desayuno:[{n:"corn flakes",k:"cornflakes",g:40},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:190},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:20},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
   media:[{n:"skyr",k:"skyr",g:155},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:35},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
   comida:[{n:"pollo (cocido)",k:"pollo",g:105},{n:"arroz cocido",k:"arroz",g:285},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:31},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
   merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"skyr",k:"skyr",g:130},{n:"miel",k:"miel",g:35}],
   cena:[{n:"merluza",k:"merluza",g:165},{n:"patata cocida",k:"patata",g:240},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:24},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
  },
  moderado:{
-  desayuno:[{n:"avena",k:"avena",g:80},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:140},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  desayuno:[{n:"corn flakes",k:"cornflakes",g:80},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:140},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
   media:[{n:"skyr",k:"skyr",g:120},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:65},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
   comida:[{n:"pollo (cocido)",k:"pollo",g:95},{n:"arroz cocido",k:"arroz",g:405},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:33},{n:"manzana",k:"manzana",g:150,t:"u",u:150}],
   merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:20},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"skyr",k:"skyr",g:115},{n:"miel",k:"miel",g:30}],
   cena:[{n:"merluza",k:"merluza",g:155},{n:"patata cocida",k:"patata",g:365},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:26},{n:"manzana",k:"manzana",g:150,t:"u",u:150}]
  },
  intenso:{
-  desayuno:[{n:"avena",k:"avena",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:90},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
+  desayuno:[{n:"corn flakes",k:"cornflakes",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:90},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:24,t:"u",u:4}],
   media:[{n:"skyr",k:"skyr",g:120},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:70},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:20,t:"u",u:4}],
   comida:[{n:"pollo (cocido)",k:"pollo",g:90},{n:"arroz cocido",k:"arroz",g:535},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:37},{n:"plátano",k:"platano",g:120,t:"u",u:120}],
   merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:60},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"skyr",k:"skyr",g:100},{n:"miel",k:"miel",g:40}],
   cena:[{n:"merluza",k:"merluza",g:135},{n:"patata cocida",k:"patata",g:490},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:30},{n:"plátano",k:"platano",g:120,t:"u",u:120}]
  },
  competicion:{
-  desayuno:[{n:"avena",k:"avena",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:105},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:4,t:"u",u:4}],
+  desayuno:[{n:"corn flakes",k:"cornflakes",g:130},{n:"leche",k:"leche",g:150,t:"ml"},{n:"yogur griego",k:"yogur",g:105},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:4,t:"u",u:4}],
   media:[{n:"skyr",k:"skyr",g:140},{n:"plátano",k:"platano",g:120,t:"u",u:120},{n:"avena cruda",k:"avena",g:70},{n:"miel",k:"miel",g:25},{n:"nueces",k:"nueces",g:8,t:"u",u:4}],
   comida:[{n:"pollo (cocido)",k:"pollo",g:90},{n:"arroz cocido",k:"arroz",g:575},{n:"verdura",k:"verdura",g:150},{n:"aceite",k:"aceite",g:14},{n:"plátano",k:"platano",g:120,t:"u",u:120}],
   merienda:[{n:"leche",k:"leche",g:200,t:"ml"},{n:"avena",k:"avena",g:75},{n:"plátano",k:"platano",g:240,t:"u",u:120},{n:"whey",k:"whey",g:15},{n:"miel",k:"miel",g:40}],
@@ -557,10 +559,12 @@ function computeDishItems(did,wd,slot){const d=dishById(did);if(!d)return [];con
   if(protItem){if(protItem.length>3)push(protItem[0],protItem[1],protItem[2],protItem[3],protItem[4]);else push(protItem[0],protItem[1],protItem[2]);}
   let ac=Math.max(0,tgt.F-Fz);if(ac>=3){ac=ceilTo(ac,1);push("aceite","aceite",ac);}
   return items;}
+function trainShiftFor(wd,key){if(wd==="sat"||wd==="sun")return "am";return (S.weekTrainTime&&S.weekTrainTime[key||dietKey()])||"pm";}
+function snackSrc(wd,mk){if(mk!=="media"&&mk!=="merienda")return mk;return trainShiftFor(wd)==="am"?(mk==="media"?"merienda":"media"):mk;}
 function mealItems(wd,mk,sf){if(mk==="comida"||mk==="cena")return computeDishItems(assignedDish(wd,mk),wd,mk);
-  return (RECIPES_ING[dayIntensity(wd)][mk]||[]).map(x=>({n:x.n,k:x.k,g:sgram(x,sf),t:x.t,u:x.u}));}
-function mealMacrosFor(wd,mk,sf){if(mk==="comida"||mk==="cena")return dishMacros(computeDishItems(assignedDish(wd,mk),wd,mk));return recipeMacros(RECIPES_ING[dayIntensity(wd)][mk]||[],sf);}
-function mealName(wd,mk){if(mk==="comida"||mk==="cena")return dishById(assignedDish(wd,mk)).name;return RECIPE_NAME[mk]||"";}
+  return (RECIPES_ING[dayIntensity(wd)][snackSrc(wd,mk)]||[]).map(x=>({n:x.n,k:x.k,g:sgram(x,sf),t:x.t,u:x.u}));}
+function mealMacrosFor(wd,mk,sf){if(mk==="comida"||mk==="cena")return dishMacros(computeDishItems(assignedDish(wd,mk),wd,mk));return recipeMacros(RECIPES_ING[dayIntensity(wd)][snackSrc(wd,mk)]||[],sf);}
+function mealName(wd,mk){if(mk==="comida"||mk==="cena")return dishById(assignedDish(wd,mk)).name;return RECIPE_NAME[snackSrc(wd,mk)]||"";}
 function assignedDish(wd,mk){const key=dietKey();const ov=ovGet(key,wd,mk);if(ov&&dishById(ov))return ov;
   const base=(comboFor(key)[wd]||{})[mk]||(mk==="comida"?1:12);return dishRepair(base,wd,dayIntensity(wd));}
 const QUOTAS={pescado:3,azul:1,legumbre:2,carneroja:1,huevo:1};
@@ -621,18 +625,26 @@ function defaultState(){
   const intensityByDay={mon:"intenso",tue:"moderado",wed:"intenso",thu:"moderado",fri:"suave",sat:"intenso",sun:"descanso"};
   return {perfil:{nombre:"Manuel Gironés Benavente",sexo:"Hombre",nacimiento:"2008-04-15",
       altura:187.4,peso:81.5,grasa:14.1,factor:1.45},
-    schedule:sched,weekSchedules:{},intensityByDay,weekIntensities:{},weekPlans:{},dishesWeekKey:null,meals:{},
+    schedule:sched,weekSchedules:{},intensityByDay,weekIntensities:{},weekPlans:{},weekTrainTime:{},dishesWeekKey:null,meals:{},
     recipes:JSON.parse(JSON.stringify(RECIPES_DEFAULT)),
     steps:buildSteps(),
     metrics:[{date:"2026-03-19",peso:81.9,grasa:14.1}],
     tasks:[{id:id(),time:"06:00",label:"Pesarme en ayunas"}],
     trainings:[],bestMarks:{"500":null,"1000":null,"2000":{time:"6:19",secs:379,date:"2026-03-19"},"6000":null},trainDone:{},trainSnooze:{},
     uni:defaultUni(),
+    supl:defaultSupl(),
     weighSnooze:null,lastWeigh:null,lastPlan:null};
 }
+function defaultSupl(){return {items:[
+ {id:id(),name:"Creatina monohidrato",dose:"5 g",rule:"daily",anchor:"breakfast",off:0,time:"",cert:true,note:"Con el desayuno. La hora da igual; lo importante es no fallar días."},
+ {id:id(),name:"Vitamina D3",dose:"2000 UI",rule:"daily",anchor:"breakfast",off:0,time:"",cert:true,note:"Con comida (lleva grasa) para absorber mejor."},
+ {id:id(),name:"Cafeína",dose:"240 mg (≈3 mg/kg)",rule:"train",anchor:"preTrain",off:45,time:"",cert:true,note:"45 min antes del primer entreno. Evítala a partir de media tarde si te cuesta dormir."},
+ {id:id(),name:"Electrolitos",dose:"500–750 ml",rule:"train",anchor:"trainStart",off:0,time:"",cert:true,note:"Durante el entreno; clave con calor o doble sesión."},
+ {id:id(),name:"Nitratos (remolacha)",dose:"400–800 mg NO₃⁻",rule:"comp",anchor:"preTrain",off:150,time:"",cert:false,note:"2,5 h antes de la salida. Pruébalo antes en entrenos; nunca por primera vez en competición."}
+],taken:{}};}
 function defaultUni(){const names=["Dret administratiu I","Dret de la persona","Dret dels contractes i de les obligacions","Introducció al dret constitucional","Introducció a la ciència política","Economia política","Introducció al dret processal","Dret romà","Història del dret i de les institucions","Teoria del dret"];
   const courses=names.map(n=>({id:id(),name:n,ects:6}));const grades={};courses.forEach(c=>grades[c.id]=[]);
-  return {courses,items:[],grades,study:[],pomo:null,cards:[]};}
+  return {courses,items:[],grades,study:[],pomo:null,cards:[],goals:[]};}
 function id(){return Math.random().toString(36).slice(2,9);}
 let S=store.get()||defaultState();
 function migrate(s){
@@ -646,7 +658,7 @@ function migrate(s){
   if(!("weighSnooze" in s))s.weighSnooze=null;
   if(!Array.isArray(s.trainings))s.trainings=[];
   if(!s.uni||typeof s.uni!=="object")s.uni=defaultUni();
-  else{s.uni.courses=s.uni.courses||[];s.uni.items=s.uni.items||[];s.uni.grades=s.uni.grades||{};s.uni.study=s.uni.study||[];if(!("pomo"in s.uni))s.uni.pomo=null;delete s.uni.studyRun;s.uni.cards=s.uni.cards||[];}
+  else{s.uni.courses=s.uni.courses||[];s.uni.items=s.uni.items||[];s.uni.grades=s.uni.grades||{};s.uni.study=s.uni.study||[];if(!("pomo"in s.uni))s.uni.pomo=null;delete s.uni.studyRun;s.uni.cards=s.uni.cards||[];s.uni.goals=s.uni.goals||[];}
   if(!s.bestMarks)s.bestMarks=JSON.parse(JSON.stringify(d.bestMarks));else ["500","1000","2000","6000"].forEach(k=>{if(!(k in s.bestMarks))s.bestMarks[k]=null;});
   if(!s.trainDone)s.trainDone={};
   if(!s.trainSnooze)s.trainSnooze={};
@@ -672,6 +684,9 @@ function migrate(s){
   if(!s.comboEpoch)s.comboEpoch=ck;
   if(s.combo0===undefined){const wdk=s.weekDishes;const okSnap=wdk&&WD.every(wd=>wdk[wd]&&wdk[wd].comida&&wdk[wd].cena);s.combo0=okSnap?JSON.parse(JSON.stringify(wdk)):null;}
   s.dishOverrides=s.dishOverrides||{};
+  s.weekTrainTime=s.weekTrainTime||{};
+  if(!s.supl||!Array.isArray(s.supl.items))s.supl=defaultSupl();
+  if(!s.supl.taken)s.supl.taken={};
   return s;
 }
 S=migrate(S);
@@ -1313,6 +1328,7 @@ function renderHoy(){const tp=todaysPlan();
   updateCountdown();
   renderRecentTrainings();
   renderHoyUni();
+  renderHoySupl();
 }
 function updateCountdown(){
   const t=document.getElementById("nowTitle");if(!t)return;
@@ -1392,6 +1408,11 @@ function renderPlanificar(){
       <div class="r-t" style="flex:0 0 40px">${WDLABEL[wd]}</div>
       <select class="input intensel" data-wd="${wd}" style="flex:1" ${locked?"disabled":""}>${opts(k)}</select></div>`;}).join("");
   document.querySelectorAll(".intensel").forEach(sel=>sel.onchange=()=>{if(!canEditWeek(selIntWeek))return;intensWeek(selIntWeek)[sel.dataset.wd]=sel.value;save();renderPlanificar();});
+  const shift=(S.weekTrainTime&&S.weekTrainTime[wk])||"pm";
+  document.getElementById("trainShiftBox").innerHTML=`<div class="label" style="margin-bottom:8px">Entreno entre semana (L–V)</div>
+    <div class="pills"><button class="pill${shift==="am"?" on":""}" ${locked?"disabled":""} onclick="setTrainShift('${wk}','am')">Por la mañana</button>
+    <button class="pill${shift==="pm"?" on":""}" ${locked?"disabled":""} onclick="setTrainShift('${wk}','pm')">Por la tarde</button></div>
+    <div class="note" style="margin-top:8px">El snack de <b>después del entreno</b> (media mañana o merienda) lleva los carbos altos; el otro queda más ligero. Sáb y dom cuentan siempre como mañana.</div>`;
   const sb=document.getElementById("savePlanBtn");sb.disabled=locked;sb.style.opacity=locked?.5:1;
   const pw=planWeight();document.getElementById("planWeightVal").textContent=fmt(pw.w)+" kg";
   document.getElementById("planWeightNote").textContent=pw.basis;
@@ -1408,6 +1429,7 @@ function renderPlanificar(){
   toggleNameField("s");
 }
 let copySel=new Set();
+function setTrainShift(wk,v){if(!canEditWeek(wk)){toast("Semana bloqueada");return;}S.weekTrainTime=S.weekTrainTime||{};S.weekTrainTime[wk]=v;save();renderPlanificar();toast(v==="am"?"Entreno L–V por la mañana":"Entreno L–V por la tarde");}
 function renderSchedule(){
   if(!selSchedWeek)selSchedWeek=S.dev?curWeekKey():weekKeyPlus(1);
   const wk=selSchedWeek;const locked=!canEditWeek(wk);
@@ -1470,8 +1492,12 @@ function weekHasDiet(key){return !!planFor(key)||key===curWeekKey();}
 function dayIntensity(wd,key){const k=key||dietKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].intensity;return intensWeek(k)[wd]||"moderado";}
 function dayMacrosFor(wd,key){const k=key||dietKey();const p=planFor(k);if(p&&p.days[wd])return p.days[wd].macros;const n=num(S.perfil);return dayMacros(ceilW(n.peso),n.grasa,n.factor,dayIntensity(wd,k));}
 function mealMacros(dm,i){const f=MEAL_SPLIT[i];return {kt:Math.round(dm.kt*f),P:Math.round(dm.P*f),C:Math.round(dm.C*f),F:Math.round(dm.F*f)};}
+let comidaSub="comidas";
+function comidaSubPills(){return `<div class="pills" style="margin-bottom:12px"><button class="pill${comidaSub==="comidas"?" on":""}" onclick="comidaSub='comidas';renderComida()">Comidas</button><button class="pill${comidaSub==="supl"?" on":""}" onclick="comidaSub='supl';renderComida()">Suplementos</button></div>`;}
 function renderComida(){if(!comidaWeek)comidaWeek=curWeekKey();DIETWK=comidaWeek;const body=document.getElementById("comidaBody");
-  if(comidaWd)renderComidaDay(body,comidaWd);else renderComidaWeek(body);}
+  if(comidaSub==="supl"){body.innerHTML=comidaSubPills()+renderSupl();return;}
+  if(comidaWd){renderComidaDay(body,comidaWd);return;}
+  renderComidaWeek(body);body.insertAdjacentHTML("afterbegin",comidaSubPills());}
 function comidaWeekPills(){const weeks=[0,1,2,3,4].map(n=>weekKeyPlus(n));
   return '<div class="card" style="margin-bottom:14px"><div class="label">Semana</div><div class="pills">'+weeks.map(k=>{const cur=k===curWeekKey();return `<button class="pill${k===comidaWeek?" on":""}" onclick="comidaWeek='${k}';comidaWd=null;renderComida();window.scrollTo(0,0)">${cur?"Actual":weekLabel(k)}</button>`;}).join("")+'</div>'+
     `<div class="note" style="margin-top:8px">${comidaWeek===curWeekKey()?"Semana en curso "+weekLabel(comidaWeek)+".":"Semana "+weekLabel(comidaWeek)+"."}</div></div>`;}
@@ -1491,8 +1517,8 @@ function renderComidaWeek(body){
   h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openShopping()">🛒 Lista de la compra de la semana</button>';
   body.innerHTML=h;}
 function openShopping(){statsActive=false;pageReturn=renderComida;document.getElementById("pageBack").style.display="flex";document.getElementById("pageBack").textContent="‹ Comidas";document.getElementById("pageTitle").textContent="Lista de la compra";renderShopping();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-const SHOPNAME={arroz:"Arroz (crudo)",pasta:"Pasta (cruda)",patata:"Patata",boniato:"Boniato",pollo:"Pollo (crudo)",pavo:"Pavo (crudo)",ternera:"Ternera (cruda)",salmon:"Salmón (crudo)",merluza:"Merluza (cruda)",cerdo:"Lomo de cerdo (crudo)",atun:"Atún en lata (escurrido)",huevo:"Huevos",lentejas:"Lentejas cocidas (bote)",garbanzos:"Garbanzos cocidos (bote)",tomate:"Tomate/sofrito",verdura:"Verdura",avena:"Avena",leche:"Leche",yogur:"Yogur griego",skyr:"Skyr",platano:"Plátanos",manzana:"Manzanas",nueces:"Nueces",miel:"Miel",whey:"Proteína whey",aceite:"Aceite de oliva"};
-const SHOPCAT={pollo:"Proteína",pavo:"Proteína",ternera:"Proteína",cerdo:"Proteína",salmon:"Proteína",merluza:"Proteína",atun:"Proteína",huevo:"Proteína",lentejas:"Proteína",garbanzos:"Proteína",arroz:"Carbohidrato",pasta:"Carbohidrato",patata:"Carbohidrato",boniato:"Carbohidrato",avena:"Carbohidrato",verdura:"Verdura y fruta",tomate:"Verdura y fruta",platano:"Verdura y fruta",manzana:"Verdura y fruta",leche:"Lácteos",yogur:"Lácteos",skyr:"Lácteos",whey:"Otros",miel:"Otros",nueces:"Otros",aceite:"Otros"};
+const SHOPNAME={arroz:"Arroz (crudo)",pasta:"Pasta (cruda)",patata:"Patata",boniato:"Boniato",pollo:"Pollo (crudo)",pavo:"Pavo (crudo)",ternera:"Ternera (cruda)",salmon:"Salmón (crudo)",merluza:"Merluza (cruda)",cerdo:"Lomo de cerdo (crudo)",atun:"Atún en lata (escurrido)",huevo:"Huevos",lentejas:"Lentejas cocidas (bote)",garbanzos:"Garbanzos cocidos (bote)",tomate:"Tomate/sofrito",verdura:"Verdura",avena:"Avena",cornflakes:"Corn flakes",leche:"Leche",yogur:"Yogur griego",skyr:"Skyr",platano:"Plátanos",manzana:"Manzanas",nueces:"Nueces",miel:"Miel",whey:"Proteína whey",aceite:"Aceite de oliva"};
+const SHOPCAT={pollo:"Proteína",pavo:"Proteína",ternera:"Proteína",cerdo:"Proteína",salmon:"Proteína",merluza:"Proteína",atun:"Proteína",huevo:"Proteína",lentejas:"Proteína",garbanzos:"Proteína",arroz:"Carbohidrato",pasta:"Carbohidrato",patata:"Carbohidrato",boniato:"Carbohidrato",avena:"Carbohidrato",cornflakes:"Carbohidrato",verdura:"Verdura y fruta",tomate:"Verdura y fruta",platano:"Verdura y fruta",manzana:"Verdura y fruta",leche:"Lácteos",yogur:"Lácteos",skyr:"Lácteos",whey:"Otros",miel:"Otros",nueces:"Otros",aceite:"Otros"};
 const SHOP_ORDER=["Proteína","Carbohidrato","Verdura y fruta","Lácteos","Otros"];
 function weekShopping(){const tot={};
   WD.forEach(wd=>{const sf=recipeScale(wd,dayIntensity(wd));
@@ -1569,7 +1595,7 @@ function openRecipe(wd,mk){const it=dayIntensity(wd);const i=MEALKEYS.indexOf(mk
   pageReturn=renderComida;document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function openStepsBox(wd,mk){const box=document.getElementById("stepsBox");
   if(box.style.display!=="none"){box.style.display="none";return;}
-  const pasos=(mk==="comida"||mk==="cena")?batchSteps(dishById(assignedDish(wd,mk))):(STEP_BY_MEAL[mk]||"");
+  const pasos=(mk==="comida"||mk==="cena")?batchSteps(dishById(assignedDish(wd,mk))):(STEP_BY_MEAL[snackSrc(wd,mk)]||"");
   box.innerHTML='<div class="label" style="margin-bottom:8px">Paso a paso</div><div class="card" id="stepsCard"></div>';
   const card=document.getElementById("stepsCard");card.style.whiteSpace="pre-wrap";card.style.lineHeight="1.6";card.textContent=pasos;
   box.style.display="block";box.scrollIntoView({behavior:"smooth",block:"nearest"});}
@@ -1600,23 +1626,29 @@ document.getElementById("bIcs").onclick=()=>{let v=["BEGIN:VCALENDAR","VERSION:2
 
 /* ---------- navegación + reloj ---------- */
 /* ===== UNIVERSIDAD ===== */
-let uniSub="prox",uniReviewId=null,uniReviewShown=false,uniTimer=null;
+let uniSub="prox",uniReviewId=null,uniReviewShown=false,uniTimer=null,uniGoalOpen=null;
 function uDaysUntil(iso){const t=new Date(isoToday()),d=new Date(iso);return Math.round((d-t)/86400000);}
 function uDatePlus(n){const d=new Date(isoToday());d.setDate(d.getDate()+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function uCourseOpts(){return '<option value="">— sin asignatura —</option>'+S.uni.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");}
-function courseNote(cid){const parts=(S.uni.grades[cid]||[]).filter(p=>p.nota!=null&&p.nota!=="");if(!parts.length)return null;let wsum=0,acc=0;parts.forEach(p=>{const w=_n(p.weight);acc+=w*_n(p.nota);wsum+=w;});return wsum?acc/wsum:null;}
+function courseNote(cid){const gs=(S.uni.grades[cid]||[]).filter(p=>p.nota!=null&&p.nota!=="");if(!gs.length)return null;return gs.reduce((a,p)=>a+_n(p.nota),0)/gs.length;}
 function renderUni(){
   const subs=[["prox","Próximo"],["asig","Asignaturas"],["repaso","Repaso"],["estudio","Estudio"]];
   document.getElementById("uniTabs").innerHTML=subs.map(([k,t])=>`<button class="pill${uniSub===k?" on":""}" onclick="uniSub='${k}';renderUni()">${t}</button>`).join("");
   const b=document.getElementById("uniBody");
   b.innerHTML=({prox:uniProx,asig:uniAsig,repaso:uniRepaso,estudio:uniEstudio}[uniSub])();
-  if(uniSub==="estudio")uniTickStart();else uniTickStop();
+  if(S.uni.pomo&&(uniSub==="estudio"||uniSub==="prox"))uniTickStart();else uniTickStop();
 }
 function uniProx(){
   const items=(S.uni.items||[]).filter(i=>!i.done).sort((a,b)=>a.date<b.date?-1:1);
-  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday()).length;
-  let h=`<div class="card"><div class="label">Repaso de hoy</div>`+(due?`<div class="row" style="padding:8px 0;border-top:none"><div class="grow r-t">${due} tarjeta${due>1?"s":""} para repasar</div><button class="btn sm teal" style="width:auto;padding:0 16px" onclick="uniSub='repaso';renderUni()">Repasar</button></div>`:`<div class="note">Nada que repasar hoy. ✓</div>`)+`</div>`;
-  h+=`<div class="label" style="margin:14px 2px 6px">Exámenes y entregas</div>`;
+  const goals=(S.uni.goals||[]);
+  let h=`<div class="label" style="margin:2px 2px 6px">Estudio programado</div>`;
+  if(!goals.length)h+=`<div class="card"><div class="empty" style="padding:18px">Nada programado. Prográmalo en la pestaña Repaso.</div></div>`;
+  else h+=`<div class="card flush">`+goals.map(g=>{const c=S.uni.courses.find(x=>x.id===g.courseId);const rem=goalRemaining(g);const done=rem<=0;const active=S.uni.pomo&&S.uni.pomo.courseId===g.courseId&&S.uni.pomo.phase==="study";const exp=uniGoalOpen===g.id;
+    return `<div class="row" style="padding:11px 16px" onclick="uniGoalOpen=uniGoalOpen==='${g.id}'?null:'${g.id}';renderUni()">
+        <div class="grow" style="min-width:0"><div class="r-t">${c?esc(c.name):"Sin asignatura"}${active?' <span class="tag" style="margin-left:4px;color:var(--ember);background:rgba(232,160,61,.15)">estudiando</span>':''}</div><div class="r-s" style="color:var(--faint)">${done?"completado ✓":"te queda por estudiar"}</div></div>
+        <div class="num" data-goalcd="${g.id}" style="font-weight:800;color:${done?"var(--teal)":(active?"var(--ember)":"var(--ink)")};font-variant-numeric:tabular-nums">${hhmmss(rem)}</div></div>`+
+      (exp?`<div style="padding:2px 16px 14px"><div class="r-s" style="color:var(--ink);white-space:pre-wrap">${g.text?esc(g.text):'<span style="color:var(--faint)">Sin notas.</span>'}</div><button class="btn ghost sm" style="margin-top:10px;color:var(--danger)" onclick="event.stopPropagation();uniDelGoal('${g.id}')">Eliminar estudio</button></div>`:'');}).join("")+`</div>`;
+  h+=`<div class="label" style="margin:16px 2px 6px">Exámenes y entregas</div>`;
   if(!items.length)h+=`<div class="card"><div class="empty" style="padding:18px">Sin nada apuntado. Añádelo abajo.</div></div>`;
   else h+=`<div class="card flush">`+items.map(i=>{const d=uDaysUntil(i.date);const c=S.uni.courses.find(x=>x.id===i.courseId);const cd=d<0?["#E5685F","vencido"]:d===0?["#E5685F","hoy"]:d<=3?["#E8A03D","faltan "+d+"d"]:["#3FC98B","faltan "+d+"d"];
     return `<div class="row" style="padding:11px 16px"><div class="grow"><div class="r-t">${esc(i.title)} <span class="tag" style="margin-left:4px">${i.kind==="examen"?"Examen":"Entrega"}</span></div><div class="r-s" style="color:var(--faint)">${c?esc(c.name)+" · ":""}${fmtD(i.date)}${i.time?" · "+i.time:""}</div></div><span class="trendchip" style="background:${cd[0]}22;color:${cd[0]}">${cd[1]}</span><button class="btn-del" onclick="uniDelItem('${i.id}')">×</button></div>`;}).join("")+`</div>`;
@@ -1644,77 +1676,61 @@ function uniAddCourse(){const n=document.getElementById("ucName").value.trim(),e
 function openUniCourse(cid){const c=S.uni.courses.find(x=>x.id===cid);if(!c)return;statsActive=false;pageReturn=renderUni;
   const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Uni";document.getElementById("pageTitle").textContent=c.name;
   document.getElementById("pageBody").innerHTML=renderUniCourse(cid);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-function renderUniCourse(cid){const parts=S.uni.grades[cid]||[];const n=courseNote(cid);const wsum=parts.reduce((a,p)=>a+_n(p.weight),0);
-  let h=`<div class="card" style="text-align:center"><div class="hero-val num" style="font-size:30px;color:${n!=null?(n>=5?"var(--teal)":"var(--ember)"):"var(--faint)"}">${n!=null?fmt(n,2):"—"}</div><div class="r-s" style="color:var(--faint)">nota${parts.length?" provisional":""} · pesos suman ${wsum}%</div></div>`;
-  h+=`<div class="label" style="margin:14px 2px 6px">Partes (parciales, prácticas…)</div><div class="card flush">`;
-  if(!parts.length)h+=`<div class="empty" style="padding:16px">Sin partes. Añade abajo.</div>`;
-  else h+=`<div class="row" style="padding:6px 16px;border-top:none"><div class="grow r-s" style="color:var(--faint)">Nombre</div><div class="r-s" style="flex:0 0 60px;text-align:center;color:var(--faint)">Peso %</div><div class="r-s" style="flex:0 0 60px;text-align:center;color:var(--faint)">Nota</div><div style="flex:0 0 24px"></div></div>`+parts.map(p=>`<div class="row" style="padding:8px 16px;gap:8px"><input class="input" value="${esc(p.name)}" onchange="uniSetPart('${cid}','${p.id}','name',this.value)" style="flex:1;min-width:0"><input class="input num" type="number" value="${p.weight}" onchange="uniSetPart('${cid}','${p.id}','weight',this.value)" style="flex:0 0 60px"><input class="input num" type="number" step="0.1" value="${p.nota!=null?p.nota:''}" onchange="uniSetPart('${cid}','${p.id}','nota',this.value)" style="flex:0 0 60px" placeholder="—"><button class="btn-del" onclick="uniDelPart('${cid}','${p.id}')">×</button></div>`).join("");
-  h+=`</div><button class="btn teal" style="margin-top:12px" onclick="uniAddPart('${cid}')">Añadir parte</button>`;
-  h+=`<button class="btn ghost" style="margin-top:8px;color:var(--danger)" onclick="uniDelCourse('${cid}')">Eliminar asignatura</button>`;
+function renderUniCourse(cid){const gs=S.uni.grades[cid]||[];const n=courseNote(cid);
+  let h=`<div class="card" style="text-align:center"><div class="hero-val num" style="font-size:30px;color:${n!=null?(n>=5?"var(--teal)":"var(--ember)"):"var(--faint)"}">${n!=null?fmt(n,2):"—"}</div><div class="r-s" style="color:var(--faint)">${gs.length?"media de "+gs.length+" calificaci"+(gs.length>1?"ones":"ón"):"sin calificaciones"}</div></div>`;
+  h+=`<div class="card"><div class="label">Añadir calificación</div>
+    <div class="field" style="margin-bottom:8px"><label>Qué examen/entrega es</label><input class="input" id="ucName" placeholder="Ej: Parcial temas 1-3"></div>
+    <div class="grid2" style="align-items:end">
+      <div class="field" style="margin-bottom:0"><label>Tipo</label><select class="input" id="ucKind"><option value="examen">Examen</option><option value="entrega">Entrega</option></select></div>
+      <div class="field" style="margin-bottom:0"><label>Nota</label><input class="input num" id="ucNota" type="number" step="0.1" placeholder="0–10"></div></div>
+    <button class="btn teal" style="margin-top:10px" onclick="uniAddCalif('${cid}')">Añadir</button></div>`;
+  if(gs.length)h+=`<div class="label" style="margin:14px 2px 6px">Calificaciones</div><div class="card flush">`+gs.map(p=>{const ktag=p.kind?(p.kind==="examen"?"Examen":"Entrega"):"Nota";const nm=p.name?esc(p.name):"";const nt=(p.nota!=null&&p.nota!=="")?fmt(_n(p.nota),2):"—";return `<div class="row" style="padding:11px 16px"><div class="grow" style="min-width:0"><div class="r-t">${nm||ktag}</div>${nm?`<div class="r-s" style="color:var(--faint)">${ktag}</div>`:""}</div><div class="num" style="font-weight:700;padding-right:10px;color:${_n(p.nota)>=5?"var(--teal)":"var(--ember)"}">${nt}</div><button class="btn-del" onclick="uniDelPart('${cid}','${p.id}')">×</button></div>`;}).join("")+`</div>`;
+  h+=`<button class="btn ghost" style="margin-top:14px;color:var(--danger)" onclick="uniDelCourse('${cid}')">Eliminar asignatura</button>`;
   return h;}
-function uniSetPart(cid,pid,f,v){const p=(S.uni.grades[cid]||[]).find(x=>x.id===pid);if(!p)return;p[f]=(f==="name")?v:(v===""?(f==="nota"?null:0):_n(v));save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
-function uniAddPart(cid){(S.uni.grades[cid]=S.uni.grades[cid]||[]).push({id:id(),name:"Parte",weight:0,nota:null});save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
+function uniAddCalif(cid){const kind=document.getElementById("ucKind").value;const name=document.getElementById("ucName").value.trim();const v=document.getElementById("ucNota").value;if(v===""||isNaN(_n(v))){toast("Pon la nota");return;}(S.uni.grades[cid]=S.uni.grades[cid]||[]).push({id:id(),kind,name,nota:_n(v)});save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);toast("Calificación añadida");}
 function uniDelPart(cid,pid){S.uni.grades[cid]=(S.uni.grades[cid]||[]).filter(x=>x.id!==pid);save();document.getElementById("pageBody").innerHTML=renderUniCourse(cid);}
 function uniDelCourse(cid){if(!confirm("¿Eliminar la asignatura y sus notas?"))return;S.uni.courses=S.uni.courses.filter(x=>x.id!==cid);delete S.uni.grades[cid];save();closePage();}
 function uniRepaso(){
-  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday());
-  let h="";
-  if(due.length){
-    if(!uniReviewId||!due.find(c=>c.id===uniReviewId)){uniReviewId=due[0].id;uniReviewShown=false;}
-    const c=S.uni.cards.find(x=>x.id===uniReviewId);const co=S.uni.courses.find(x=>x.id===c.courseId);
-    h+=`<div class="card"><div class="r-s" style="color:var(--faint)">${due.length} por repasar${co?" · "+esc(co.name):""}</div>
-      <div class="r-t" style="font-size:17px;margin:12px 0;min-height:22px">${esc(c.front)}</div>`;
-    if(uniReviewShown){
-      if(c.back)h+=`<div class="divider"></div><div class="r-s" style="font-size:15px;color:var(--ink)">${esc(c.back)}</div>`;
-      h+=`<div class="grid2" style="margin-top:14px;gap:8px">
-        <button class="btn sm" style="background:#E5685F22;color:#E5685F;border-color:#E5685F55" onclick="uniGrade(0)">Otra vez</button>
-        <button class="btn sm" style="background:#E8A03D22;color:#E8A03D;border-color:#E8A03D55" onclick="uniGrade(1)">Difícil</button>
-        <button class="btn sm teal" onclick="uniGrade(2)">Bien</button>
-        <button class="btn sm" style="background:#3FC98B22;color:#3FC98B;border-color:#3FC98B55" onclick="uniGrade(3)">Fácil</button></div>`;
-    } else h+=`<button class="btn primary" style="margin-top:8px" onclick="uniReviewShown=true;renderUni()">Mostrar respuesta</button>`;
-    h+=`</div>`;
-  } else h+=`<div class="card"><div class="empty" style="padding:22px">Nada que repasar hoy. ✓</div></div>`;
-  h+=`<div class="card"><div class="label">Nueva tarjeta</div>
-    <div class="field" style="margin-bottom:8px"><label>Pregunta / tema (anverso)</label><textarea class="input" id="ucFront" rows="2"></textarea></div>
-    <div class="field" style="margin-bottom:8px"><label>Respuesta (reverso, opcional)</label><textarea class="input" id="ucBack" rows="2"></textarea></div>
-    <div class="field" style="margin-bottom:8px"><label>Asignatura</label><select class="input" id="ucCardCourse">${uCourseOpts()}</select></div>
-    <button class="btn teal" onclick="uniAddCard()">Añadir tarjeta</button></div>`;
-  const tot=(S.uni.cards||[]).length;if(tot)h+=`<div class="note" style="margin-top:6px;text-align:center">${tot} tarjeta${tot>1?"s":""} en total</div>`;
+  let h=`<div class="card"><div class="label">Programar estudio</div>
+    <div class="field" style="margin-bottom:10px"><label>Asignatura</label><select class="input" id="ugCourse">${uCourseOpts()}</select></div>
+    <div class="grid2"><div class="field" style="margin-bottom:10px"><label>Horas</label><input class="input num" id="ugH" type="number" min="0" placeholder="0"></div>
+    <div class="field" style="margin-bottom:10px"><label>Minutos</label><input class="input num" id="ugM" type="number" min="0" max="59" placeholder="0"></div></div>
+    <div class="field" style="margin-bottom:10px"><label>Qué tengo que hacer</label><textarea class="input" id="ugText" rows="3" placeholder="Ej: repasar temas 1-3 y hacer 20 tipo test"></textarea></div>
+    <button class="btn teal" onclick="uniAddGoal()">Programar</button></div>
+    <div class="note" style="margin-top:8px">El tiempo solo se descuenta cuando estudias esa asignatura en un Pomodoro (pestaña Estudio). La cuenta atrás aparece en <b>Próximo</b>; tócala para ver tus notas o eliminarla.</div>`;
   return h;
 }
-function uniAddCard(){const f=document.getElementById("ucFront").value.trim();if(!f){toast("Escribe la pregunta o tema");return;}const back=document.getElementById("ucBack").value.trim(),cid=document.getElementById("ucCardCourse").value;
-  S.uni.cards.push({id:id(),courseId:cid||null,front:f,back,ease:2.3,ivl:0,reps:0,due:isoToday()});save();renderUni();toast("Tarjeta añadida");}
-function uniGrade(q){const c=S.uni.cards.find(x=>x.id===uniReviewId);if(!c)return;
-  let ease=c.ease||2.3,ivl=c.ivl||0,reps=c.reps||0;
-  if(q===0){ease=Math.max(1.3,ease-0.2);ivl=0;reps=0;}
-  else{if(q===1){ease=Math.max(1.3,ease-0.15);ivl=reps===0?1:Math.max(1,Math.round(ivl*1.2));}
-    else if(q===2){ivl=reps===0?1:Math.max(1,Math.round(ivl*ease));}
-    else{ease=ease+0.15;ivl=reps===0?3:Math.max(1,Math.round(ivl*ease*1.3));}
-    reps++;}
-  c.ease=ease;c.ivl=ivl;c.reps=reps;c.due=uDatePlus(ivl);
-  uniReviewId=null;uniReviewShown=false;save();renderUni();}
+function goalRemaining(g){const p=S.uni.pomo;let live=0;if(p&&p.courseId===g.courseId&&p.phase==="study"&&p.studyStartTs)live=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0)/1000;return Math.max(0,g.neededSec-(g.studiedSec||0)-live);}
+function uniAddGoal(){const cid=document.getElementById("ugCourse").value,hh=Math.max(0,Math.floor(_n(document.getElementById("ugH").value))),mm=Math.max(0,Math.floor(_n(document.getElementById("ugM").value))),text=document.getElementById("ugText").value.trim();
+  if(!cid){toast("Elige la asignatura");return;}const sec=(hh*60+mm)*60;if(sec<60){toast("Pon cuánto tienes que estudiar");return;}
+  (S.uni.goals=S.uni.goals||[]).push({id:id(),courseId:cid,text,neededSec:sec,studiedSec:0,createdTs:Date.now()});save();uniSub="prox";renderUni();window.scrollTo(0,0);toast("Estudio programado");}
+function uniDelGoal(gid){S.uni.goals=(S.uni.goals||[]).filter(x=>x.id!==gid);if(uniGoalOpen===gid)uniGoalOpen=null;save();renderUni();}
 const POMO={"50":{study:50,brk:10,maxExtra:4},"25":{study:25,brk:5,maxExtra:2}};
 function pomoMs(min){return min*60000;}
 function pomoRemain(){const p=S.uni.pomo;return p?Math.max(0,p.endTs-Date.now()):0;}
 function pomoClock(){const r=Math.round(pomoRemain()/1000);return pad(Math.floor(r/60))+":"+pad(r%60);}
 function pomoStudiedTotal(){const p=S.uni.pomo;if(!p)return 0;let s=p.studiedMs||0;if(p.phase==="study"&&p.studyStartTs)s+=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0);return s;}
+function pomoAccrue(ms){const p=S.uni.pomo;if(!p||ms<=0)return;p.studiedMs=(p.studiedMs||0)+ms;(S.uni.goals||[]).forEach(g=>{if(g.courseId&&g.courseId===p.courseId)g.studiedSec=Math.min(g.neededSec,(g.studiedSec||0)+ms/1000);});}
 function pomoAdvance(){const p=S.uni.pomo;if(!p)return;const cfg=POMO[p.type];
-  if(p.phase==="study"){p.studiedMs=(p.studiedMs||0)+(p.blockBudgetMs||pomoMs(cfg.study));p.studyStartTs=null;p.cycles=(p.cycles||0)+1;p.phase="break";p.endTs=Date.now()+pomoMs(cfg.brk);}
+  if(p.phase==="study"){pomoAccrue(p.blockBudgetMs||pomoMs(cfg.study));p.studyStartTs=null;p.cycles=(p.cycles||0)+1;p.phase="break";p.endTs=Date.now()+pomoMs(cfg.brk);}
   else if(p.phase==="break"){p.phase="study";p.studyStartTs=Date.now();p.blockBudgetMs=pomoMs(cfg.study);p.endTs=Date.now()+pomoMs(cfg.study);}
   else if(p.phase==="mbreak"){const rem=p.resumeMs||pomoMs(cfg.study);p.phase="study";p.studyStartTs=Date.now();p.blockBudgetMs=rem;p.endTs=Date.now()+rem;p.resumeMs=0;}
   save();}
 function pomoTick(){const p=S.uni.pomo;if(!p){uniTickStop();return;}
   if(Date.now()>=p.endTs){pomoAdvance();renderUni();return;}
-  const t=document.getElementById("pomoTime");if(t)t.textContent=pomoClock();else uniTickStop();}
+  const t=document.getElementById("pomoTime");if(t)t.textContent=pomoClock();
+  document.querySelectorAll("[data-goalcd]").forEach(el=>{const g=(S.uni.goals||[]).find(x=>x.id===el.getAttribute("data-goalcd"));if(g)el.textContent=hhmmss(goalRemaining(g));});}
 function uniTickStart(){uniTickStop();if(S.uni.pomo)uniTimer=setInterval(pomoTick,1000);}
 function uniTickStop(){if(uniTimer){clearInterval(uniTimer);uniTimer=null;}}
 function pomoStart(){const cid=document.getElementById("usCourse").value,mode=document.getElementById("usMode").value,type=document.getElementById("usType").value,cfg=POMO[type];
   S.uni.pomo={courseId:cid||null,mode,type,phase:"study",studyStartTs:Date.now(),blockBudgetMs:pomoMs(cfg.study),endTs:Date.now()+pomoMs(cfg.study),studiedMs:0,resumeMs:0,cycles:0,extraBreaks:0};save();renderUni();}
 function pomoBreak5(){const p=S.uni.pomo;if(!p||p.phase!=="study")return;const cfg=POMO[p.type];if((p.extraBreaks||0)>=cfg.maxExtra){toast("No quedan descansos");return;}
-  const elapsed=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0);p.studiedMs=(p.studiedMs||0)+elapsed;p.resumeMs=Math.max(0,(p.blockBudgetMs||0)-elapsed);
+  const elapsed=Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0);p.resumeMs=Math.max(0,(p.blockBudgetMs||0)-elapsed);pomoAccrue(elapsed);
   p.studyStartTs=null;p.extraBreaks=(p.extraBreaks||0)+1;p.phase="mbreak";p.endTs=Date.now()+pomoMs(5);save();renderUni();}
-function pomoEnd(){const p=S.uni.pomo;if(!p)return;const mins=Math.round(pomoStudiedTotal()/60000),cid=p.courseId,mode=p.mode;S.uni.pomo=null;
-  if(mins>=1){S.uni.study.push({id:id(),courseId:cid,mode,date:isoToday(),mins});toast("Sesión guardada: "+mins+" min");}else toast("Sesión muy corta, no se guarda");save();renderUni();}
+function hhmmss(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return pad(h)+":"+pad(m)+":"+pad(s);}
+function pomoEnd(){const p=S.uni.pomo;if(!p)return;if(p.phase==="study"&&p.studyStartTs){pomoAccrue(Math.min(Date.now()-p.studyStartTs,p.blockBudgetMs||0));p.studyStartTs=null;}
+  const secs=Math.round((p.studiedMs||0)/1000),cid=p.courseId,mode=p.mode;S.uni.pomo=null;
+  if(secs>=60){S.uni.study.push({id:id(),courseId:cid,mode,date:isoToday(),secs});toast("Sesión guardada: "+hhmmss(secs));}else toast("Sesión muy corta, no se guarda");save();renderUni();}
 function uniEstudio(){
   const p=S.uni.pomo;let h="";
   if(p){const cfg=POMO[p.type],co=S.uni.courses.find(x=>x.id===p.courseId),isStudy=p.phase==="study";
@@ -1737,28 +1753,97 @@ function uniEstudio(){
   h+=`<button class="btn" style="width:100%;margin-top:14px" onclick="openStudyStats()">📊 Estadísticas de estudio</button>`;
   return h;
 }
-function studyTotals(cid){const ss=(S.uni.study||[]).filter(s=>!cid||s.courseId===cid);let total=0,mem=0,res=0;ss.forEach(s=>{const m=_n(s.mins);total+=m;if(s.mode==="memorizar")mem+=m;else if(s.mode==="resumir")res+=m;});return {total,mem,res};}
+function studyTotals(cid){const ss=(S.uni.study||[]).filter(s=>!cid||s.courseId===cid);let total=0,mem=0,res=0;ss.forEach(s=>{const sec=s.secs!=null?_n(s.secs):_n(s.mins)*60;total+=sec;if(s.mode==="memorizar")mem+=sec;else if(s.mode==="resumir")res+=sec;});return {total,mem,res};}
 function openStudyStats(){pageReturn=renderUni;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Uni";document.getElementById("pageTitle").textContent="Estadísticas de estudio";document.getElementById("pageBody").innerHTML=renderStudyStats();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function renderStudyStats(){const t=studyTotals(null);
-  let h=`<div class="card flush">`+srow("Tiempo total de estudio",durFmt(t.total*60))+srow("Memorizando",durFmt(t.mem*60))+srow("Resumiendo",durFmt(t.res*60))+`</div>`;
+  let h=`<div class="card flush">`+srow("Tiempo total de estudio",hhmmss(t.total))+srow("Memorizando",hhmmss(t.mem))+srow("Resumiendo",hhmmss(t.res))+`</div>`;
   h+=`<div class="label" style="margin:16px 2px 6px">Por asignatura</div>`;
   const cs=S.uni.courses.filter(c=>studyTotals(c.id).total>0);
   if(!cs.length)h+=`<div class="card"><div class="empty" style="padding:18px">Aún no has registrado estudio. Empieza un pomodoro.</div></div>`;
-  else h+=`<div class="card flush">`+cs.map(c=>{const ct=studyTotals(c.id);return `<button class="mrow" style="width:100%" onclick="openStudyStatsCourse('${c.id}')"><div class="grow r-t">${esc(c.name)}</div><span class="m-prev"><span class="m-val num">${durFmt(ct.total*60)}</span><span class="chev">›</span></span></button>`;}).join("")+`</div>`;
+  else h+=`<div class="card flush">`+cs.map(c=>{const ct=studyTotals(c.id);return `<button class="mrow" style="width:100%" onclick="openStudyStatsCourse('${c.id}')"><div class="grow r-t">${esc(c.name)}</div><span class="m-prev"><span class="m-val num">${hhmmss(ct.total)}</span><span class="chev">›</span></span></button>`;}).join("")+`</div>`;
   return h;
 }
 function openStudyStatsCourse(cid){const c=S.uni.courses.find(x=>x.id===cid);if(!c)return;pageReturn=openStudyStats;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Estadísticas";document.getElementById("pageTitle").textContent=c.name;document.getElementById("pageBody").innerHTML=renderStudyStatsCourse(cid);document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function renderStudyStatsCourse(cid){const t=studyTotals(cid),n=(S.uni.study||[]).filter(s=>s.courseId===cid).length;
-  return `<div class="card flush">`+srow("Tiempo total",durFmt(t.total*60))+srow("Memorizando",durFmt(t.mem*60))+srow("Resumiendo",durFmt(t.res*60))+srow("Sesiones",String(n))+`</div>`;
+  return `<div class="card flush">`+srow("Tiempo total",hhmmss(t.total))+srow("Memorizando",hhmmss(t.mem))+srow("Resumiendo",hhmmss(t.res))+srow("Sesiones",String(n))+`</div>`;
 }
 function renderHoyUni(){const card=document.getElementById("hoyUniCard");const el=document.getElementById("hoyUni");if(!card||!el)return;
   const items=(S.uni.items||[]).filter(i=>!i.done).sort((a,b)=>a.date<b.date?-1:1);
-  const due=(S.uni.cards||[]).filter(c=>c.due<=isoToday()).length;
-  if(!items.length&&!due){card.style.display="none";return;}
+  const pend=(S.uni.goals||[]).filter(g=>goalRemaining(g)>0).length;
+  if(!items.length&&!pend){card.style.display="none";return;}
   card.style.display="block";let h="";
-  if(due)h+=`<div class="row" style="border-top:none;padding:6px 0"><div class="grow r-t">${due} repaso${due>1?"s":""} pendiente${due>1?"s":""}</div><button class="btn sm teal" style="width:auto;padding:0 14px" onclick="nav('uni');uniSub='repaso';renderUni()">Repasar</button></div>`;
+  if(pend)h+=`<div class="row" style="border-top:none;padding:6px 0"><div class="grow r-t">${pend} estudio${pend>1?"s":""} programado${pend>1?"s":""}</div><button class="btn sm teal" style="width:auto;padding:0 14px" onclick="nav('uni');uniSub='prox';renderUni()">Ver</button></div>`;
   items.slice(0,2).forEach(i=>{const d=uDaysUntil(i.date);const lab=d<0?"vencido":d===0?"hoy":"faltan "+d+"d";h+=`<div class="row" style="padding:6px 0"><div class="grow"><div class="r-t">${esc(i.title)}</div><div class="r-s" style="color:var(--faint)">${i.kind==="examen"?"Examen":"Entrega"} · ${fmtD(i.date)}</div></div><div class="r-s" style="color:var(--ember);font-weight:600">${lab}</div></div>`;});
   el.innerHTML=h;}
+/* ===== SUPLEMENTACIÓN ===== */
+const SUPL_RULE={daily:"Todos los días",train:"Días de entreno",comp:"Solo competición/test"};
+const SUPL_ANCHOR={breakfast:"Con el desayuno",preTrain:"Antes del entreno",trainStart:"Al empezar el entreno",postTrain:"Después del entreno",bed:"Antes de dormir",time:"Hora fija"};
+function suplBlocks(){return daySchedule(todayKey(),curWeekKey());}
+function suplFirstTrain(){const bs=suplBlocks();let best=null;bs.forEach((b,i)=>{if(b.type!=="train")return;const s=toMin(blkStart(b));if(best===null||s<best.s)best={s,e:resolveEndMin(bs,i)};});return best;}
+function suplDayApplies(it){const inten=dayIntensity(todayKey(),curWeekKey());
+  if(it.rule==="comp")return inten==="competicion";
+  if(it.rule==="train")return inten!=="descanso";
+  return true;}
+function suplTimeMin(it){const tr=suplFirstTrain();
+  if(it.anchor==="time")return isHM(it.time)?toMin(it.time):null;
+  if(it.anchor==="breakfast"){const bs=suplBlocks();const meal=bs.filter(b=>b.type==="meal").map(b=>toMin(blkStart(b))).sort((a,b)=>a-b)[0];return meal!=null?meal:510;}
+  if(it.anchor==="bed"){const bs=suplBlocks();const sl=bs.filter(b=>b.type==="sleep").map(b=>toMin(blkStart(b))).filter(m=>m>=1080).sort((a,b)=>a-b)[0];return sl!=null?sl:1380;}
+  const base=tr?tr.s:600;
+  if(it.anchor==="preTrain")return Math.max(0,base-(_n(it.off)||0));
+  if(it.anchor==="trainStart")return base;
+  if(it.anchor==="postTrain")return tr?tr.e:base+60;
+  return null;}
+function suplToday(){return (S.supl.items||[]).filter(suplDayApplies).map(it=>({it,min:suplTimeMin(it)})).filter(x=>x.min!=null).sort((a,b)=>a.min-b.min);}
+function suplTaken(iid){return !!(S.supl.taken[isoToday()]&&S.supl.taken[isoToday()][iid]);}
+function suplToggle(iid){const k=isoToday();S.supl.taken[k]=S.supl.taken[k]||{};S.supl.taken[k][iid]=!S.supl.taken[k][iid];
+  const keys=Object.keys(S.supl.taken).sort();while(keys.length>30){delete S.supl.taken[keys.shift()];}
+  save();renderHoySupl();if(curView==="comida"&&comidaSub==="supl")renderComida();}
+function suplRows(){const list=suplToday();if(!list.length)return "";
+  return list.map(({it,min})=>{const done=suplTaken(it.id);
+    return `<div class="row" style="padding:9px 0"><div class="num" style="flex:0 0 52px;font-weight:700;color:${done?"var(--faint)":"var(--ember)"}">${minHM(min)}</div>
+      <div class="grow" style="min-width:0"><div class="r-t" style="${done?"opacity:.5;text-decoration:line-through":""}">${esc(it.name)}</div><div class="r-s" style="color:var(--faint)">${esc(it.dose)}</div></div>
+      <button class="btn sm ${done?"teal":"ghost"}" style="width:auto;padding:0 14px;flex:0 0 auto" onclick="suplToggle('${it.id}')">${done?"✓":"Tomar"}</button></div>`;}).join("");}
+function renderHoySupl(){const card=document.getElementById("hoySuplCard"),el=document.getElementById("hoySupl");if(!card||!el)return;
+  const rows=suplRows();if(!rows){card.style.display="none";return;}card.style.display="block";el.innerHTML=rows;}
+function renderSupl(){
+  const inten=dayIntensity(todayKey(),curWeekKey());const rows=suplRows();
+  let h=`<div class="card"><div class="label">Hoy te toca</div>`+(rows||`<div class="note">Nada programado para hoy (${ENGINE.dayTypes[inten].label}).</div>`)+`</div>`;
+  h+=`<div class="label" style="margin:14px 2px 6px">Mi stack</div><div class="card flush">`;
+  if(!(S.supl.items||[]).length)h+=`<div class="empty" style="padding:18px">Sin suplementos. Añade abajo.</div>`;
+  else h+=S.supl.items.map(it=>`<button class="mrow" style="width:100%" onclick="openSuplEdit('${it.id}')">
+      <div class="grow" style="min-width:0"><div class="r-t">${esc(it.name)} <span style="color:var(--faint);font-weight:400">· ${esc(it.dose)}</span></div>
+      <div class="r-s" style="color:var(--faint)">${SUPL_RULE[it.rule]} · ${it.anchor==="preTrain"?(_n(it.off)||0)+" min antes del entreno":it.anchor==="time"?"a las "+(it.time||"—"):SUPL_ANCHOR[it.anchor]}${it.cert?"":' · <span style="color:var(--danger)">⚠ sin certificado antidopaje</span>'}</div></div>
+      <span class="chev">›</span></button>`).join("");
+  h+=`</div><button class="btn teal" style="width:100%;margin-top:12px" onclick="openSuplEdit(null)">Añadir suplemento</button>`;
+  h+=`<div class="note" style="margin-top:10px">Las horas se anclan a tu horario real (bloques de entreno, desayuno y sueño de esta semana). Si cambias el horario en Planificar, las tomas se recolocan solas. ⚠ Compitiendo a nivel nacional, usa solo lotes con certificado (Informed Sport / NSF).</div>`;
+  return h;}
+function openSuplEdit(iid){const it=iid?S.supl.items.find(x=>x.id===iid):null;pageReturn=renderComida;statsActive=false;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Suplementos";
+  document.getElementById("pageTitle").textContent=it?it.name:"Nuevo suplemento";
+  const v=k=>it?it[k]:"";
+  document.getElementById("pageBody").innerHTML=`
+    <div class="card">
+      <div class="field" style="margin-bottom:8px"><label>Nombre</label><input class="input" id="spName" value="${esc(v("name")||"")}"></div>
+      <div class="field" style="margin-bottom:8px"><label>Dosis</label><input class="input" id="spDose" value="${esc(v("dose")||"")}" placeholder="Ej: 5 g"></div>
+      <div class="field" style="margin-bottom:8px"><label>Cuándo aplica</label><select class="input" id="spRule">${Object.keys(SUPL_RULE).map(k=>`<option value="${k}" ${it&&it.rule===k?"selected":""}>${SUPL_RULE[k]}</option>`).join("")}</select></div>
+      <div class="field" style="margin-bottom:8px"><label>Momento</label><select class="input" id="spAnchor" onchange="suplEditFields()">${Object.keys(SUPL_ANCHOR).map(k=>`<option value="${k}" ${it&&it.anchor===k?"selected":""}>${SUPL_ANCHOR[k]}</option>`).join("")}</select></div>
+      <div class="field" id="spOffF" style="margin-bottom:8px;display:none"><label>Minutos antes del entreno</label><input class="input num" id="spOff" type="number" value="${it&&it.off?it.off:45}"></div>
+      <div class="field" id="spTimeF" style="margin-bottom:8px;display:none"><label>Hora</label><input class="input num" id="spTime" type="time" value="${esc(v("time")||"")}"></div>
+      <div class="field" style="margin-bottom:8px"><label>Notas</label><textarea class="input" id="spNote" rows="2">${esc(v("note")||"")}</textarea></div>
+      <label class="row" style="padding:6px 0;border-top:none;gap:10px"><input type="checkbox" id="spCert" ${!it||it.cert?"checked":""} style="width:19px;height:19px"> <span class="r-t">Lote con certificado antidopaje</span></label>
+      <button class="btn teal" style="margin-top:10px" onclick="saveSupl(${iid?`'${iid}'`:"null"})">Guardar</button>
+      ${iid?`<button class="btn ghost" style="margin-top:8px;color:var(--danger)" onclick="delSupl('${iid}')">Eliminar suplemento</button>`:""}
+    </div>`;
+  document.getElementById("page").classList.add("show");window.scrollTo(0,0);suplEditFields();}
+function suplEditFields(){const a=document.getElementById("spAnchor").value;
+  document.getElementById("spOffF").style.display=a==="preTrain"?"block":"none";
+  document.getElementById("spTimeF").style.display=a==="time"?"block":"none";}
+function saveSupl(iid){const name=document.getElementById("spName").value.trim();if(!name){toast("Ponle nombre");return;}
+  const o={name,dose:document.getElementById("spDose").value.trim()||"—",rule:document.getElementById("spRule").value,anchor:document.getElementById("spAnchor").value,off:Math.max(0,Math.round(_n(document.getElementById("spOff").value))),time:document.getElementById("spTime").value||"",cert:document.getElementById("spCert").checked,note:document.getElementById("spNote").value.trim()};
+  if(o.anchor==="time"&&!isHM(o.time)){toast("Pon la hora");return;}
+  if(iid){const it=S.supl.items.find(x=>x.id===iid);Object.assign(it,o);}else S.supl.items.push(Object.assign({id:id()},o));
+  save();closePage();toast(o.cert?"Guardado":"Guardado · ⚠ sin certificado");}
+function delSupl(iid){if(!confirm("¿Eliminar este suplemento?"))return;S.supl.items=S.supl.items.filter(x=>x.id!==iid);save();closePage();}
 const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos",uni:"Universidad"};
 function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);
   requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollTop=6*WKX_HH-16;});}
