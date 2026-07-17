@@ -359,7 +359,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="4.6";
+const APP_VERSION="4.7";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -551,8 +551,12 @@ function computeDishItems(did,wd,slot){const d=dishById(did);if(!d)return [];con
   push("verdura","verdura",150);acc("verdura",150);
   d.extra.forEach(([k,g])=>{const nm=(k==="huevo")?"huevo":FOODNAME[k]||k;if(k==="huevo"){push(nm,k,g,"u",50);}else push(nm,k,g);acc(k,g);});
   push(fr.n,fr.k,fr.g,"u",fr.u);acc(fr.k,fr.g);
-  let protItem=null;
-  if(d.prot){let pg=(tgt.P-P)/(FOOD[d.prot][1]/100);pg=Math.max(FLOORG[d.prot]||60,pg);
+  let protItem=null;const cb=FOOD[d.carb];
+  if(d.prot){const pf=FOOD[d.prot];
+    const Pneed=Math.max(0,tgt.P-P),Cneed=Math.max(0,tgt.C-C);
+    const den=pf[1]*cb[2]-pf[2]*cb[1];
+    let pg=den>0?Math.max(0,(Pneed*cb[2]-Cneed*cb[1])*100/den):Pneed*100/pf[1];
+    pg=Math.max(FLOORG[d.prot]||60,pg);
     if(d.prot==="huevo"){pg=ceilTo(pg,50);protItem=["huevo","huevo",pg,"u",50];}else{pg=ceilTo(pg,5);protItem=[FOODNAME[d.prot],d.prot,pg];}
     acc(d.prot,pg);}
   let cg=Math.max(0,(tgt.C-C)/(FOOD[d.carb][2]/100));cg=ceilTo(cg,5);push(FOODNAME[d.carb],d.carb,cg);acc(d.carb,cg);
