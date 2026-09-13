@@ -353,7 +353,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="8.9";
+const APP_VERSION="9.7";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -372,7 +372,7 @@ const MODES={
 };
 const ENGINE={dayTypes:MODES,kcalP:4,kcalC:4,kcalF:9};
 const INTENS=["m1","m2","m3","m4","m5","m6","m7","m8","m9","m10"];
-const NEAT=1.35, PROT_GKG=1.9, PROT_BY_MODE={1:1.7,2:1.65,3:1.65,4:1.65,5:1.7,6:1.8,7:1.85,8:1.9,9:1.8,10:1.9}, FAT_GKG=1.2, FAT_GKG_COMP=1.0, CARB_CAP_GKG=12;
+const NEAT=1.35, PROT_GKG=1.9, PROT_BY_MODE={1:1.9,2:1.9,3:1.9,4:1.95,5:2.0,6:2.05,7:2.1,8:2.1,9:2.05,10:2.1}, FAT_GKG=1.2, FAT_GKG_COMP=1.0, CARB_CAP_GKG=12;
 const lean=(p,g)=>p*(1-g/100), tmbKatch=m=>370+21.6*m, getBase=(p,g,f)=>tmbKatch(lean(p,g))*f;
 const ceilW=p=>Math.min(90,Math.max(65,Math.ceil((+p||0)-1e-9)));
 function dayMacros(p,g,f,key){const d=MODES[key]||MODES.m1;
@@ -412,9 +412,9 @@ const MEALKEYS=["desayuno","bici","media","comida","merienda","cena"];
 /* ================= MOTOR DE NUTRICIÓN v7 ================= */
 /* Reparto del día por comidas, anclado al entreno */
 const SPLIT={
- rest:{desayuno:[.20,.18,.20],media:[.15,.17,.15],comida:[.27,.27,.30],merienda:[.13,.13,.10],cena:[.25,.25,.25]},
- train:{desayuno:[.26,.22,.12],media:[.22,.22,.13],comida:[.24,.23,.32],merienda:[.12,.13,.18],cena:[.16,.20,.25]},
- comp:{desayuno:[.30,.22,.12],media:[.20,.23,.13],comida:[.22,.22,.30],merienda:[.12,.13,.20],cena:[.16,.20,.25]}
+ rest:{desayuno:[.20,.18,.20],media:[.15,.12,.15],comida:[.27,.28,.32],merienda:[.13,.12,.08],cena:[.25,.30,.25]},
+ train:{desayuno:[.26,.18,.12],media:[.22,.12,.13],comida:[.24,.28,.35],merienda:[.12,.12,.08],cena:[.16,.30,.32]},
+ comp:{desayuno:[.30,.18,.12],media:[.20,.12,.13],comida:[.22,.28,.35],merienda:[.12,.12,.08],cena:[.16,.30,.32]}
 };
 function modeOf(wd,key){return MODES[dayIntensity(wd,key)]||MODES.m1;}
 function mealTargetRaw(wd,mk,key){const M=modeOf(wd,key),dm=dayMacrosFor(wd,key);
@@ -470,28 +470,28 @@ function desayunoItems(wd,key){
 const DISHES={
  salmon_arroz:{name:"Salmón + arroz + verdura al horno",prot:"salmonc",carb:"arrozs",fix:[['verdurah',200]]},
  ternera_maca:{name:"Ternera + macarrones + tomate y pimiento",prot:"terneras",carb:"macarrones",fix:[['tomate',100],['pimiento',80]]},
- lomo_fusilli:{name:"Lomo + fusilli + champiñones y tomate",prot:"lomos",carb:"fusilli",fix:[['champi',120],['tomate',80]]},
+ lomo_fusilli:{name:"Lomo + fusilli + tomate y verdura salteada",prot:"lomos",carb:"fusilli",fix:[['tomate',80],['verduras',150]]},
  salmon_patata:{name:"Salmón + patata + verdura salteada",prot:"salmonc",carb:"patatamicro",fix:[['verduras',200]]},
- pollo_arroz_gar:{name:"Pollo + arroz + garbanzos y pimiento",prot:"polloc",carb:"arrozs",fix:[['garbanzos',120],['pimiento',100]]},
- campera:{name:"Campera: huevos + patata + atún + maíz y aceitunas",prot:"atun",carb:"patatamicro",fix:[['huevo',55],['maiz',80],['aceitunas',25]]},
+ pollo_arroz_gar:{name:"Pollo + arroz + garbanzos y pimiento",prot:"polloc",carb:"arrozs",fix:[['garbanzos',100],['pimiento',100]]},
+ lentejas_huevo:{name:"Lentejas con huevo, arroz y verdura salteada",prot:"huevo",carb:"arrozs",fix:[['lentejas',200],['verduras',150]]},
  pollo_maca:{name:"Pollo + macarrones + tomate y pimiento",prot:"polloc",carb:"macarrones",fix:[['tomate',100],['pimiento',80]]},
- ternera_fusilli:{name:"Ternera + fusilli + champiñones",prot:"terneras",carb:"fusilli",fix:[['champi',150]]},
+ ternera_fusilli:{name:"Ternera + fusilli + verdura salteada",prot:"terneras",carb:"fusilli",fix:[['verduras',180]]},
  pollo_patata:{name:"Pollo + patata + verdura salteada",prot:"polloc",carb:"patatamicro",fix:[['verduras',200]]},
- lomo_maca:{name:"Lomo + macarrones + tomate y aceitunas",prot:"lomos",carb:"macarrones",fix:[['tomate',100],['aceitunas',30]]},
- atun_fusilli:{name:"Atún + fusilli + tomate, espárragos y maíz",prot:"atun",carb:"fusilli",fix:[['tomate',80],['esparragos',100],['maiz',80]]},
- mejillones_patata:{name:"Mejillones + patata + pimiento y maíz",prot:"mejillones",carb:"patatamicro",fix:[['pimiento',100],['maiz',60]]}
+ lomo_maca:{name:"Lomo + macarrones + tomate",prot:"lomos",carb:"macarrones",fix:[['tomate',120]]},
+ atun_fusilli:{name:"Atún + fusilli + tomate y maíz",prot:"atun",carb:"fusilli",fix:[['tomate',100],['maiz',80]]},
+ lubina_patata:{name:"Lubina + patata + verdura salteada",prot:"lubinac",carb:"patatamicro",fix:[['verduras',200]]}
 };
 const WEEK_PLAN={
  mon:{comida:"salmon_arroz",cena:"ternera_maca"},
  tue:{comida:"lomo_fusilli",cena:"salmon_patata"},
- wed:{comida:"pollo_arroz_gar",cena:"campera"},
+ wed:{comida:"pollo_arroz_gar",cena:"lentejas_huevo"},
  thu:{comida:"salmon_arroz",cena:"pollo_maca"},
  fri:{comida:"ternera_fusilli",cena:"pollo_patata"},
  sat:{comida:"pollo_arroz_gar",cena:"lomo_maca"},
- sun:{comida:"atun_fusilli",cena:"mejillones_patata"}
+ sun:{comida:"atun_fusilli",cena:"lubina_patata"}
 };
-const PMIN={salmonc:100,terneras:100,lomos:100,polloc:100,atun:60,mejillones:100},
-      PMAX={salmonc:220,terneras:220,lomos:220,polloc:220,atun:180,mejillones:250},
+const PMIN={lubinac:150,salmonc:140,terneras:140,lomos:140,polloc:150,atun:80,huevo:100},
+      PMAX={salmonc:220,terneras:230,lomos:230,polloc:240,atun:180,lubinac:250,huevo:200},
       CMAX={patatamicro:400};
 function dishOf(wd,mk){return DISHES[WEEK_PLAN[wd][mk]];}
 function dishItems(wd,mk,key){
@@ -507,23 +507,18 @@ function dishItems(wd,mk,key){
   c=Math.max(0,Math.round((t.C-m.C-p*Fp[2]/100)/(Fc[2]/100)/5)*5);
   let extra=null;
   if(CMAX[d.carb]&&c>CMAX[d.carb]){extra=['arrozs',0];c=CMAX[d.carb];}
-  /* Si el carbo (pasta/arroz) arrastra tanta proteína que el plato desbordaría su objetivo,
-     se sustituye parte por patata, que es el carbohidrato con menos proteína (1,7 g/100).
-     Sin esto, en días de mucho hidrato los platos se comen la proteína de los snacks. */
-  if(d.carb!=='patatamicro'){
-    const pTot=m.P+p*Fp[1]/100+c*Fc[1]/100;
-    if(pTot>t.P+6){
-      const exceso=pTot-(t.P+6);
-      const dP=(Fc[1]-FOOD.patatamicro[1])/100;
-      let mover=Math.min(c,Math.round(exceso/dP/5)*5);
-      const cPat=Math.round(mover*Fc[2]/FOOD.patatamicro[2]/5)*5;
-      if(mover>0&&cPat<=(CMAX.patatamicro||400)){c-=mover;items.push({k:'patatamicro',g:cPat});}}}
   items.push({k:d.prot,g:p});items.push({k:d.carb,g:c});
   m=itemsMacros(items);
   if(extra){let eg=Math.max(0,Math.round((t.C-m.C)/(FOOD.arrozs[2]/100)/5)*5);
     if(eg>0){items.push({k:'arrozs',g:eg});m=itemsMacros(items);}}
   let fat=t.F-m.F;
-  if(fat>15){const nu=Math.max(0,Math.round((fat-15)*100/65/5)*5);if(nu){items.push({k:'nueces',g:nu});m=itemsMacros(items);}}
+  /* POSTRE ÚNICO — yogur griego con miel, el mismo todos los días y solo cuando el plato
+     no llega. Nada de frutos secos ni ingredientes sueltos para cuadrar macros. */
+  let faltaC=t.C-m.C;
+  if(faltaC>12){const mi=Math.min(20,Math.round(faltaC*0.3/5)*5);
+    if(mi>=5){items.push({k:'miel',g:mi});m=itemsMacros(items);faltaC=t.C-m.C;}
+    const yo=Math.min(250,Math.round(faltaC/(FOOD.yogur[2]/100)/10)*10);
+    if(yo>=50){items.push({k:'yogur',g:yo});m=itemsMacros(items);}}
   const ac=Math.max(0,Math.round(t.F-m.F));
   if(ac>=3)items.push({k:'aceite',g:ac});
   return items;}
@@ -541,8 +536,7 @@ function almuerzoItems(wd,key){
   let pl=0;
   if(t.C-mac().C>15){pl=Math.min(3,Math.round((t.C-mac().C)/(FOOD.platano[2]*0.6)));if(pl>0)it.push({k:'platano',g:pl*60});}
   if(t.C-mac().C>10){const le=Math.min(300,Math.round((t.C-mac().C)/(FOOD.leche[2]/100)/10)*10);if(le>=50)it.push({k:'leche',g:le});}
-  const wh=Math.min(60,Math.max(0,Math.round((t.P-mac().P)/(FOOD.whey[1]/100)/5)*5));
-  if(wh>=5)it.push({k:'whey',g:wh});
+
   const ac=Math.round(t.F-mac().F);if(ac>=3)it.push({k:'aceite',g:ac});
   return it;}
 /* MERIENDA — batido en botella (se agita, sin batidora): leche mínimo 500 g,
@@ -559,9 +553,42 @@ function meriendaItems(wd,key){
   if(mi>=5)it.push({k:'miel',g:mi});
   const wh=Math.min(50,Math.max(0,Math.round((t.P-mac().P)/(FOOD.whey[1]/100)/5)*5));
   if(wh>=5)it.push({k:'whey',g:wh});
-  const nu=Math.round((t.F-mac().F)*100/65);
-  if(nu>=10)it.push({k:'nueces',g:Math.round(nu/5)*5});
   return it;}
+/* ---------- TANDAS DE COCINA ---------- */
+const BATCH={
+ 1:{titulo:"Tanda del domingo",sub:"Se cocina el domingo por la tarde y cubre desde esa misma cena hasta el miércoles.",
+    comidas:[['sun','cena'],['mon','comida'],['mon','cena'],['tue','comida'],['tue','cena'],['wed','comida'],['wed','cena']],aparte:null},
+ 2:{titulo:"Tanda del jueves",sub:"Se cocina el jueves por la mañana y cubre de jueves a sábado.",
+    comidas:[['thu','comida'],['thu','cena'],['fri','comida'],['fri','cena'],['sat','comida'],['sat','cena']],
+    aparte:{et:"Domingo · comida",nota:"Va aparte porque son cuatro días desde la tanda: cocina la pasta ese mismo día o guárdala bien tapada, y el atún se abre en el momento.",comidas:[['sun','comida']]}}
+};
+function batchTot(lista){const tot={};
+  lista.forEach(([wd,mk])=>{mealItems(wd,mk,1).forEach(x=>{tot[x.k]=(tot[x.k]||0)+x.g;});});
+  Object.keys(tot).forEach(k=>{if(RAWF[k])tot[k]=tot[k]*RAWF[k];});
+  return tot;}
+function batchTabla(tot){
+  const grupos={},verd={};
+  Object.keys(tot).forEach(k=>{
+    if(VERD_MIX[k]){Object.keys(VERD_MIX[k]).forEach(v=>{verd[v]=(verd[v]||0)+tot[k]*VERD_MIX[k][v];});return;}
+    const c=SHOPCAT[k]||"Otros";(grupos[c]=grupos[c]||[]).push([FOODNAME[k]||k,tot[k],k]);});
+  Object.keys(verd).forEach(v=>{(grupos["Verdura"]=grupos["Verdura"]||[]).push([VERD_NAME[v],verd[v],v]);});
+  return SHOP_ORDER.concat(["Verdura"]).filter((v,i,a)=>a.indexOf(v)===i).map(c=>{
+    if(!grupos[c])return "";
+    const filas=grupos[c].sort((a,b)=>b[1]-a[1]).map(([n,g,k])=>
+      `<div class="row" style="padding:8px 0"><div class="grow r-t">${n}</div><div class="num" style="font-weight:700;color:var(--ember)">${fmtQty(k,g)}</div></div>`).join("");
+    return `<div class="label" style="margin:14px 2px 6px">${c}</div><div class="card">${filas}</div>`;}).join("");}
+function openBatch(n){const B=BATCH[n];statsActive=false;pageReturn=renderComida;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Comidas";
+  document.getElementById("pageTitle").textContent=B.titulo;
+  const dias=B.comidas.map(([wd,mk])=>`${WDLABEL[wd]} ${mk==="comida"?"comida":"cena"}`).join(" · ");
+  let h=`<div class="note" style="margin-bottom:12px">${B.sub}<br><b>Cubre:</b> ${dias}.<br>Cantidades <b>en crudo</b>, totales para esas comidas.</div>`;
+  h+=batchTabla(batchTot(B.comidas));
+  if(B.aparte){h+=`<div class="label" style="margin:20px 2px 6px">${B.aparte.et}</div>`;
+    h+=`<div class="note" style="margin:0 0 6px">${B.aparte.nota}</div>`;
+    h+=batchTabla(batchTot(B.aparte.comidas));}
+  h+=`<div class="note" style="margin-top:14px"><b>Al montar:</b> recipientes anchos y bajos, a la nevera antes de 2 h. Escribe en la tapa qué es y de qué día.</div>`;
+  document.getElementById("pageBody").innerHTML=h;
+  document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 /* ---------- API COMÚN ---------- */
 function mealItems(wd,mk,sf,key){
   if(mk==="bici")return [];
@@ -589,9 +616,9 @@ const WDLABEL_LONG={mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"
 function buildSteps(){return {};}
 const UNIT_PLURAL={"platano":["plátano","plátanos"],"plátano":["plátano","plátanos"],"nueces":["nuez","nueces"],"manzana":["manzana","manzanas"],"huevo":["huevo","huevos"]};
 // ingredientes base a 81,5 kg. t: "g"(def)/"ml"/"u"(unidad fija). u: gramos por unidad.
-const FOOD={avena:[380,13,60,7],cornflakes:[378,7,84,0.9],pan:[247,9,41,3.4],fiambrepavo:[110,18,2,3],chocapic:[384,8.4,73,4.6],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],avenap:[380,13,66,7],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],patatamicro:[70,1.7,15.7,0.1],boniato:[90,1.6,20,0.1],recovery:[220,11,43,0.5],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],tomate:[80,1.5,9,4],verdura:[35,2,6,0.3],verdurah:[50,1.8,9.6,0.3],verduras:[42,3.6,5.5,0.5],aceite:[884,0,0,100],macarrones:[360,12,71,1.5],fusilli:[360,12,71,1.5],arrozs:[350,7.5,78,0.9],champi:[22,3,1,0.3],maiz:[90,3,17,1],aceitunas:[145,1,1,15],esparragos:[20,2,2,0.2],pimiento:[30,1,5,0.3],mejillones:[150,18,4,7],arandanos:[57,0.7,14,0.3],salmonc:[208,20,0,13],terneras:[130,21,0,5],lomos:[130,22,0,4],polloc:[110,23,0,2]};
+const FOOD={avena:[380,13,60,7],cornflakes:[378,7,84,0.9],pan:[247,9,41,3.4],fiambrepavo:[110,18,2,3],chocapic:[384,8.4,73,4.6],leche:[46,3.1,4.7,1.6],yogur:[97,9,3.8,5],skyr:[63,11,4,0.2],platano:[89,1.1,23,0.3],manzana:[52,0.3,14,0.2],nueces:[654,15,14,65],miel:[304,0.3,82,0],whey:[400,80,8,6],avenap:[380,13,66,7],arroz:[130,2.4,28,0.3],pasta:[158,5.8,30,0.9],patata:[80,1.8,18,0.1],patatamicro:[70,1.7,15.7,0.1],boniato:[90,1.6,20,0.1],recovery:[220,11,43,0.5],pollo:[165,31,0,3.6],pavo:[150,29,0,2.5],ternera:[218,26,0,12],salmon:[230,25,0,14],merluza:[92,19,0,1.5],cerdo:[200,29,0,9],atun:[116,26,0,1],huevo:[143,13,1,10],lentejas:[116,9,20,0.4],garbanzos:[139,9,22,2.6],tomate:[80,1.5,9,4],verdura:[35,2,6,0.3],verdurah:[50,1.8,9.6,0.3],verduras:[42,3.6,5.5,0.5],aceite:[884,0,0,100],macarrones:[360,12,71,1.5],fusilli:[360,12,71,1.5],arrozs:[350,7.5,78,0.9],champi:[22,3,1,0.3],maiz:[90,3,17,1],aceitunas:[145,1,1,15],esparragos:[20,2,2,0.2],pimiento:[30,1,5,0.3],arandanos:[57,0.7,14,0.3],salmonc:[208,20,0,13],lubinac:[97,20,0,1.5],terneras:[130,21,0,5],lomos:[130,22,0,4],polloc:[110,23,0,2]};
 const RAWF={verdurah:1.5,verduras:1.3,arroz:0.37,pasta:0.42,patatamicro:1.05,patata:1.05,boniato:1.05,pollo:1.43,pavo:1.43,ternera:1.4,salmon:1.25,merluza:1.25,cerdo:1.4};
-const FOODNAME={avenap:"avena en polvo",recovery:"batido Recovery 4:1",arroz:"arroz",pasta:"pasta",patata:"patata",patatamicro:"patata de bolsa (microondas)",boniato:"boniato",pollo:"pollo",pavo:"pavo",ternera:"ternera magra",salmon:"salmón",merluza:"merluza",cerdo:"lomo de cerdo",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas de bote",garbanzos:"garbanzos de bote",tomate:"tomate/sofrito",verdura:"verdura",verdurah:"verdura al horno",verduras:"verdura salteada",macarrones:"macarrones",fusilli:"fusilli",arrozs:"arroz",champi:"champiñones",maiz:"maíz dulce",aceitunas:"aceitunas",esparragos:"espárragos",pimiento:"pimiento asado",mejillones:"mejillones",arandanos:"arándanos",salmonc:"salmón",terneras:"ternera",lomos:"lomo de cerdo",polloc:"pollo"};
+const FOODNAME={avenap:"avena en polvo",recovery:"batido Recovery 4:1",arroz:"arroz",pasta:"pasta",patata:"patata",patatamicro:"patata de bolsa (microondas)",boniato:"boniato",pollo:"pollo",pavo:"pavo",ternera:"ternera magra",salmon:"salmón",merluza:"merluza",cerdo:"lomo de cerdo",atun:"atún en lata (escurrido)",huevo:"huevo",lentejas:"lentejas de bote",garbanzos:"garbanzos de bote",tomate:"tomate/sofrito",verdura:"verdura",verdurah:"verdura al horno",verduras:"verdura salteada",macarrones:"macarrones",fusilli:"fusilli",arrozs:"arroz",champi:"champiñones",maiz:"maíz dulce",aceitunas:"aceitunas",esparragos:"espárragos",pimiento:"pimiento asado",arandanos:"arándanos",salmonc:"salmón",lubinac:"lubina",terneras:"ternera",lomos:"lomo de cerdo",polloc:"pollo"};
 // Biblioteca de 16 platos. prot/carb = clave FOOD; extra fijo; tags cuotas; cons conservación; comodin sale más
 function ceilTo(x,s){return Math.ceil(x/s)*s;}
 function ucount(x){return Math.max(1,Math.round(x.g/x.u));}
@@ -1491,7 +1518,9 @@ function renderComidaWeek(body){
       <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
       <span class="m-prev"><span class="m-val num">${m.kt} kcal</span><span class="chev">›</span></span></button>`;});
   h+='</div>';
-  h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openCookPlan()">🍳 Plan de cocina de la semana</button>';
+  h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openBatch(1)">🍳 Tanda del domingo · dom cena → miércoles</button>';
+  h+='<button class="btn teal" style="width:100%;margin-top:8px" onclick="openBatch(2)">🍳 Tanda del jueves · jueves → sábado</button>';
+  h+='<button class="btn" style="width:100%;margin-top:8px" onclick="openCookPlan()">Plan de cocina de la semana (total)</button>';
   h+='<button class="btn" style="width:100%;margin-top:8px" onclick="openShopping()">🛒 Lista de la compra de la semana</button>';
   body.innerHTML=h;}
 /* ===== PLAN DE COCINA (batch de una tarde) ===== */
@@ -1507,36 +1536,38 @@ function openCookPlan(){statsActive=false;pageReturn=renderComida;
   document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
 function renderCookPlan(){
   const tot=cookTotals();const g=k=>tot[k]?fmtQty(k,tot[k]):null;
-  const HORNO={pollo:["Pollo",'220 °C, 25-30 min'],ternera:["Ternera",'sartén fuerte, 3-4 min por lado'],cerdo:["Lomo de cerdo",'sartén fuerte, 4-5 min por lado'],merluza:["Merluza",'200 °C, 15-18 min'],salmon:["Salmón",'200 °C, 12-15 min']};
-  const OLLA={arroz:["Arroz",'agua hirviendo, 15-18 min'],pasta:["Pasta",'al dente, 1 min menos que el paquete'],huevo:["Huevos cocidos",'10 min desde que hierve, luego agua fría']};
+  const HORNO={polloc:["Pollo",'220 °C, 25-30 min'],terneras:["Ternera",'sartén fuerte, 3-4 min por lado'],lomos:["Lomo de cerdo",'sartén fuerte, 4-5 min por lado'],salmonc:["Salmón",'200 °C, 12-15 min']};
+  const OLLA={arrozs:["Arroz",'agua hirviendo, 15-18 min'],macarrones:["Macarrones",'al dente, 1 min menos que el paquete'],fusilli:["Fusilli",'al dente, 1 min menos que el paquete'],huevo:["Huevos cocidos",'10 min desde que hierve, luego agua fría']};
   const HORNEAR={patata:["Patata",'200 °C, 35-40 min en dados'],boniato:["Boniato",'200 °C, 30-35 min en dados']};
+  const FRESCO={lubinac:["Lubina",'NO la cocines hoy: al horno o air fryer el mismo domingo, 15 min. El pescado cocinado solo aguanta 2 días']};
   const CRUDO={atun:["Atún en lata",'solo escurrir'],lentejas:["Lentejas de bote",'enjuagar bien'],garbanzos:["Garbanzos de bote",'enjuagar bien'],patatamicro:["Patatas de bolsa para microondas",'NO las hagas hoy: 7-8 min en el micro el día que tocan']};
   const blk=(titulo,sub,obj,extra)=>{const rows=Object.keys(obj).filter(k=>tot[k]).map(k=>
       `<div class="row" style="padding:9px 0"><div class="grow"><div class="r-t">${obj[k][0]}</div><div class="r-s" style="color:var(--faint)">${obj[k][1]}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${g(k)}</div></div>`).join("");
     return rows?`<div class="label" style="margin:16px 2px 6px">${titulo}</div><div class="card">${sub?`<div class="note" style="margin:0 0 6px">${sub}</div>`:""}${rows}${extra||""}</div>`:"";};
   let h=`<div class="note" style="margin-bottom:12px">Cantidades <b>en crudo</b>, totales para los 7 días (comidas y cenas). Todo se cocina en una tarde: enciende el horno, pon las ollas en paralelo y monta los tuppers al final.</div>`;
-  h+=blk("1 · Horno — bandeja de proteína","Empieza por aquí: es lo que más tarda.",{pollo:HORNO.pollo,ternera:HORNO.ternera,cerdo:HORNO.cerdo});
+  h+=blk("1 · Horno — bandeja de proteína","Empieza por aquí: es lo que más tarda.",{polloc:HORNO.polloc,terneras:HORNO.terneras,lomos:HORNO.lomos});
   h+=blk("2 · Horno — bandeja de tubérculo","En dados de 2 cm, con aceite y sal. Patata y boniato caben en la misma bandeja.",HORNEAR);
-  h+=blk("3 · Horno — pescado (al final)","Última tanda, que es la más rápida. El pescado cocinado solo aguanta 2 días: come las raciones de pescado <b>lunes y martes</b> y congela el resto el mismo día.",{merluza:HORNO.merluza,salmon:HORNO.salmon});
+  h+=blk("3 · Horno — pescado (al final)","Última tanda, la más rápida. El pescado cocinado aguanta 2 días en nevera, así que el salmón se come en los dos días siguientes a cocinarlo.",{salmonc:HORNO.salmonc});
   h+=blk("4 · Fuegos — ollas en paralelo","Mientras el horno trabaja. Tres ollas a la vez y listo.",OLLA);
-  h+=blk("5 · Sin cocinar hoy","Cero tiempo de cocina y aguantan toda la semana. Las patatas de bolsa se hacen en el microondas el día que tocan, recién hechas.",CRUDO);
+  h+=blk("5 · Se cocina el mismo día","El pescado cocinado aguanta 2 días en nevera, así que la lubina del domingo no sale de esta tanda.",FRESCO);
+  h+=blk("6 · Sin cocinar hoy","Cero tiempo de cocina y aguantan toda la semana. Las patatas de bolsa se hacen en el microondas el día que tocan, recién hechas.",CRUDO);
   const vrow=(k,titulo,sub)=>{if(!tot[k])return "";
     const det=Object.keys(VERD_MIX[k]).map(v=>`${VERD_NAME[v]} ${fmtQty(v,tot[k]*VERD_MIX[k][v])}`).join(" · ");
     return `<div class="label" style="margin:16px 2px 6px">${titulo}</div><div class="card"><div class="note" style="margin:0 0 6px">${sub}</div><div class="row" style="padding:9px 0"><div class="grow"><div class="r-t">Total</div><div class="r-s" style="color:var(--faint)">${det}</div></div><div class="num" style="font-weight:700;color:var(--ember)">${g(k)}</div></div></div>`;};
-  h+=vrow("verdurah","6 · Verdura al horno","Va en la misma bandeja que la patata y el boniato: en tiras o dados, aceite y sal, 200 °C 25-30 min. Para los tuppers de lunes a miércoles.");
-  h+=vrow("verduras","7 · Verdura salteada","Sartén grande o wok, 6-8 min, fuego fuerte. Congela bien, así que es la de los tuppers de jueves a domingo. Las espinacas al final, 1 min.");
-  h+=`<div class="label" style="margin:16px 2px 6px">8 · Montaje</div><div class="card"><div class="note" style="margin:0">
+  h+=vrow("verdurah","7 · Verdura al horno","Va en la misma bandeja que la patata y el boniato: en tiras o dados, aceite y sal, 200 °C 25-30 min. Para los tuppers de lunes a miércoles.");
+  h+=vrow("verduras","8 · Verdura salteada","Sartén grande o wok, 6-8 min, fuego fuerte. Congela bien, así que es la de los tuppers de jueves a domingo. Las espinacas al final, 1 min.");
+  h+=`<div class="label" style="margin:16px 2px 6px">9 · Montaje</div><div class="card"><div class="note" style="margin:0">
     Monta <b>14 tuppers</b> (7 comidas + 7 cenas) con las cantidades que indica cada día en la app. Recipientes <b>anchos y bajos</b>, a la nevera antes de 2 h.<br><br>
     <b>Nevera:</b> los tres primeros días. <b>Congelador:</b> de jueves a domingo, y sácalos a la nevera la víspera.<br>
     Escribe en cada tapa qué es y de qué día.</div></div>`;
   return h;}
 function openShopping(){statsActive=false;pageReturn=renderComida;document.getElementById("pageBack").style.display="flex";document.getElementById("pageBack").textContent="‹ Comidas";document.getElementById("pageTitle").textContent="Lista de la compra";renderShopping();document.getElementById("page").classList.add("show");window.scrollTo(0,0);}
-const SHOPNAME={patatamicro:"Patatas de microondas (bolsas)",arroz:"Arroz (crudo)",pasta:"Pasta (cruda)",patata:"Patata",boniato:"Boniato",pollo:"Pollo (crudo)",pavo:"Pavo (crudo)",ternera:"Ternera (cruda)",salmon:"Salmón (crudo)",merluza:"Merluza (cruda)",cerdo:"Lomo de cerdo (crudo)",atun:"Atún en lata (escurrido)",huevo:"Huevos",lentejas:"Lentejas cocidas (bote)",garbanzos:"Garbanzos cocidos (bote)",tomate:"Tomate/sofrito",verdura:"Verdura",avena:"Avena",cornflakes:"Corn flakes",pan:"Pan de molde integral",fiambrepavo:"Fiambre de pavo",chocapic:"Chocapic",leche:"Leche",yogur:"Yogur griego",skyr:"Skyr",platano:"Plátanos",manzana:"Manzanas",nueces:"Nueces",miel:"Miel",whey:"Proteína whey",aceite:"Aceite de oliva",macarrones:"Macarrones (crudos)",fusilli:"Fusilli (crudos)",arrozs:"Arroz (crudo)",champi:"Champiñones",maiz:"Maíz dulce (lata)",aceitunas:"Aceitunas",esparragos:"Espárragos (lata)",pimiento:"Pimiento asado (lata)",mejillones:"Mejillones (lata)",arandanos:"Arándanos",salmonc:"Salmón (crudo)",terneras:"Ternera (cruda)",lomos:"Lomo de cerdo (crudo)",polloc:"Pollo (crudo)"};
-const SHOPCAT={pollo:"Proteína",pavo:"Proteína",ternera:"Proteína",cerdo:"Proteína",salmon:"Proteína",merluza:"Proteína",atun:"Proteína",huevo:"Proteína",lentejas:"Proteína",garbanzos:"Proteína",arroz:"Carbohidrato",patatamicro:"Carbohidrato",pasta:"Carbohidrato",patata:"Carbohidrato",boniato:"Carbohidrato",avena:"Carbohidrato",cornflakes:"Carbohidrato",pan:"Carbohidrato",fiambrepavo:"Proteína",chocapic:"Carbohidrato",verdura:"Verdura y fruta",tomate:"Verdura y fruta",platano:"Verdura y fruta",manzana:"Verdura y fruta",leche:"Lácteos",yogur:"Lácteos",skyr:"Lácteos",whey:"Otros",miel:"Otros",nueces:"Otros",aceite:"Otros",macarrones:"Carbohidrato",fusilli:"Carbohidrato",arrozs:"Carbohidrato",champi:"Verdura y fruta",maiz:"Conservas",aceitunas:"Conservas",esparragos:"Conservas",pimiento:"Conservas",mejillones:"Conservas",arandanos:"Verdura y fruta",salmonc:"Proteína",terneras:"Proteína",lomos:"Proteína",polloc:"Proteína"};
+const SHOPNAME={patatamicro:"Patatas de microondas (bolsas)",arroz:"Arroz (crudo)",pasta:"Pasta (cruda)",patata:"Patata",boniato:"Boniato",pollo:"Pollo (crudo)",pavo:"Pavo (crudo)",ternera:"Ternera (cruda)",salmon:"Salmón (crudo)",merluza:"Merluza (cruda)",cerdo:"Lomo de cerdo (crudo)",atun:"Atún en lata (escurrido)",huevo:"Huevos",lentejas:"Lentejas cocidas (bote)",garbanzos:"Garbanzos cocidos (bote)",tomate:"Tomate/sofrito",verdura:"Verdura",avena:"Avena",cornflakes:"Corn flakes",pan:"Pan de molde integral",fiambrepavo:"Fiambre de pavo",chocapic:"Chocapic",leche:"Leche",yogur:"Yogur griego",skyr:"Skyr",platano:"Plátanos",manzana:"Manzanas",nueces:"Nueces",miel:"Miel",whey:"Proteína whey",aceite:"Aceite de oliva",macarrones:"Macarrones (crudos)",fusilli:"Fusilli (crudos)",arrozs:"Arroz (crudo)",champi:"Champiñones",maiz:"Maíz dulce (lata)",aceitunas:"Aceitunas",esparragos:"Espárragos (lata)",pimiento:"Pimiento asado (lata)",arandanos:"Arándanos",salmonc:"Salmón (crudo)",lubinac:"Lubina (cruda)",terneras:"Ternera (cruda)",lomos:"Lomo de cerdo (crudo)",polloc:"Pollo (crudo)"};
+const SHOPCAT={pollo:"Proteína",pavo:"Proteína",ternera:"Proteína",cerdo:"Proteína",salmon:"Proteína",merluza:"Proteína",atun:"Proteína",huevo:"Proteína",lentejas:"Proteína",garbanzos:"Proteína",arroz:"Carbohidrato",patatamicro:"Carbohidrato",pasta:"Carbohidrato",patata:"Carbohidrato",boniato:"Carbohidrato",avena:"Carbohidrato",cornflakes:"Carbohidrato",pan:"Carbohidrato",fiambrepavo:"Proteína",chocapic:"Carbohidrato",verdura:"Verdura y fruta",tomate:"Verdura y fruta",platano:"Verdura y fruta",manzana:"Verdura y fruta",leche:"Lácteos",yogur:"Lácteos",skyr:"Lácteos",whey:"Otros",miel:"Otros",nueces:"Otros",aceite:"Otros",macarrones:"Carbohidrato",fusilli:"Carbohidrato",arrozs:"Carbohidrato",champi:"Verdura y fruta",maiz:"Conservas",aceitunas:"Conservas",esparragos:"Conservas",pimiento:"Conservas",arandanos:"Verdura y fruta",salmonc:"Proteína",lubinac:"Proteína",terneras:"Proteína",lomos:"Proteína",polloc:"Proteína"};
 const VERD_MIX={
- verdurah:{pimientorojo:.28,pimientoverde:.16,cebolla:.22,calabacin:.22,zanahoria:.12},
- verduras:{brocoli:.34,judiasverdes:.33,champinon:.20,espinacas:.13}};
-const VERD_NAME={pimientorojo:"Pimiento rojo",pimientoverde:"Pimiento verde",cebolla:"Cebolla",calabacin:"Calabacín",zanahoria:"Zanahoria",brocoli:"Brócoli (congelado)",judiasverdes:"Judías verdes (congeladas)",champinon:"Champiñones",espinacas:"Espinacas"};
+ verdurah:{pimientorojo:.32,cebolla:.24,calabacin:.26,zanahoria:.18},
+ verduras:{cebolla:.20,pimientorojo:.24,calabacin:.22,zanahoria:.14,champinon:.20}};
+const VERD_NAME={pimientorojo:"Pimiento rojo",pimientoverde:"Pimiento verde",cebolla:"Cebolla",calabacin:"Calabacín",zanahoria:"Zanahoria",brocoli:"Brócoli (congelado)",judiasverdes:"Judías verdes (congeladas)",champinon:"Champiñones"};
 const SHOP_ORDER=["Proteína","Carbohidrato","Verdura y fruta","Conservas","Lácteos","Otros"];
 function weekShopping(){const tot={};
   WD.forEach(wd=>{const sf=recipeScale(wd,dayIntensity(wd));
