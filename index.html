@@ -353,7 +353,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="9.7";
+const APP_VERSION="9.8";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -577,6 +577,44 @@ function batchTabla(tot){
     const filas=grupos[c].sort((a,b)=>b[1]-a[1]).map(([n,g,k])=>
       `<div class="row" style="padding:8px 0"><div class="grow r-t">${n}</div><div class="num" style="font-weight:700;color:var(--ember)">${fmtQty(k,g)}</div></div>`).join("");
     return `<div class="label" style="margin:14px 2px 6px">${c}</div><div class="card">${filas}</div>`;}).join("");}
+/* ---------- CALCULADORA DE INGREDIENTES ----------
+   Eliges qué comidas y cenas quieres cocinar y te suma todos los ingredientes en crudo. */
+let calcSel=new Set();
+const CALC_PRESET={
+  dom:[['sun','cena'],['mon','comida'],['mon','cena'],['tue','comida'],['tue','cena'],['wed','comida'],['wed','cena']],
+  jue:[['thu','comida'],['thu','cena'],['fri','comida'],['fri','cena'],['sat','comida'],['sat','cena'],['sun','comida']]};
+function calcToggle(wd,mk){const k=wd+"|"+mk;if(calcSel.has(k))calcSel.delete(k);else calcSel.add(k);renderCalc();}
+function calcPreset(p){calcSel=new Set(CALC_PRESET[p].map(([a,b])=>a+"|"+b));renderCalc();}
+function calcClear(){calcSel=new Set();renderCalc();}
+function openCalc(){statsActive=false;pageReturn=renderComida;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Comidas";
+  document.getElementById("pageTitle").textContent="Calcular ingredientes";
+  document.getElementById("page").classList.add("show");window.scrollTo(0,0);renderCalc();}
+function renderCalc(){
+  const orden=['mon','tue','wed','thu','fri','sat','sun'];
+  let h=`<div class="note" style="margin-bottom:10px">Toca las comidas que vas a cocinar. Abajo te sale la suma de todos los ingredientes, <b>en crudo</b>.</div>`;
+  h+=`<div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="btn sm" style="flex:1" onclick="calcPreset('dom')">Tanda domingo</button>
+    <button class="btn sm" style="flex:1" onclick="calcPreset('jue')">Tanda jueves</button>
+    <button class="btn sm ghost" style="flex:0 0 auto;padding:0 14px" onclick="calcClear()">Borrar</button></div>`;
+  h+=`<div class="card flush">`;
+  orden.forEach(wd=>{
+    const btn=mk=>{const on=calcSel.has(wd+"|"+mk);
+      return `<button onclick="calcToggle('${wd}','${mk}')" style="flex:1;padding:10px 6px;border-radius:9px;font-size:13px;font-weight:600;border:1px solid ${on?'var(--teal)':'var(--line)'};background:${on?'rgba(53,208,190,.18)':'transparent'};color:${on?'var(--teal)':'var(--muted)'}">${on?'✓ ':''}${mk==='comida'?'Comida':'Cena'}</button>`;};
+    h+=`<div class="row" style="padding:8px 14px;gap:8px"><div style="flex:0 0 42px;font-weight:700">${WDLABEL[wd]}</div>${btn('comida')}${btn('cena')}</div>`;});
+  h+=`</div>`;
+  if(!calcSel.size){h+=`<div class="empty" style="padding:22px">Selecciona al menos una comida.</div>`;}
+  else{
+    const lista=[...calcSel].map(s=>s.split("|"));
+    const nombres=lista.sort((a,b)=>orden.indexOf(a[0])-orden.indexOf(b[0])||(a[1]==='comida'?-1:1))
+      .map(([wd,mk])=>`${WDLABEL[wd]} ${mk==='comida'?'comida':'cena'}`).join(" · ");
+    h+=`<div class="label" style="margin:16px 2px 4px">Ingredientes para ${calcSel.size} comida${calcSel.size>1?'s':''}</div>`;
+    h+=`<div class="note" style="margin:0 0 4px">${nombres}</div>`;
+    h+=batchTabla(batchTot(lista));
+    const pesc=lista.some(([wd,mk])=>{const d=dishOf(wd,mk);return d&&['salmonc','lubinac'].includes(d.prot);});
+    if(pesc)h+=`<div class="note" style="margin-top:12px"><b>Ojo con el pescado:</b> cocinado solo aguanta 2 días en nevera. Si alguna de las comidas elegidas cae más tarde, cocina ese pescado el mismo día.</div>`;
+  }
+  document.getElementById("pageBody").innerHTML=h;}
 function openBatch(n){const B=BATCH[n];statsActive=false;pageReturn=renderComida;
   const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Comidas";
   document.getElementById("pageTitle").textContent=B.titulo;
@@ -1518,8 +1556,7 @@ function renderComidaWeek(body){
       <span class="tag" style="color:${d.c};background:${d.c}22">${d.label}</span>
       <span class="m-prev"><span class="m-val num">${m.kt} kcal</span><span class="chev">›</span></span></button>`;});
   h+='</div>';
-  h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openBatch(1)">🍳 Tanda del domingo · dom cena → miércoles</button>';
-  h+='<button class="btn teal" style="width:100%;margin-top:8px" onclick="openBatch(2)">🍳 Tanda del jueves · jueves → sábado</button>';
+  h+='<button class="btn teal" style="width:100%;margin-top:14px" onclick="openCalc()">🧮 Calcular ingredientes · elige las comidas</button>';
   h+='<button class="btn" style="width:100%;margin-top:8px" onclick="openCookPlan()">Plan de cocina de la semana (total)</button>';
   h+='<button class="btn" style="width:100%;margin-top:8px" onclick="openShopping()">🛒 Lista de la compra de la semana</button>';
   body.innerHTML=h;}
