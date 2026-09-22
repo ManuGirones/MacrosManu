@@ -252,7 +252,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
       <div class="macros" id="hoyMacros" style="margin-top:12px"></div>
       <div class="note" id="hoyPlanNote" style="margin-top:10px"></div></div>
     <div class="card"><div class="label">El día, de un vistazo</div><div class="tl" id="hoyTimeline"></div>
-      <button class="btn sm" style="width:100%;margin-top:12px" onclick="openWeekPreview()">Ver horario de la semana</button></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm" style="flex:1" onclick="openWeekPreview()">Ver horario de la semana</button><button class="btn sm" style="flex:1" onclick="openShift()">⏰ Retrasar hoy</button></div></div>
     <div class="card"><div class="label">Entrenos</div>
       <button class="btn sm teal" style="width:100%;margin-top:6px" onclick="openTrainForm({})">Registrar entreno</button>
       <div id="recentTrainings"></div></div>
@@ -353,7 +353,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="9.8";
+const APP_VERSION="9.9";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -1808,6 +1808,44 @@ function saveSupl(iid){const name=document.getElementById("spName").value.trim()
   save();closePage();toast(o.cert?"Guardado":"Guardado · ⚠ sin certificado");}
 function delSupl(iid){if(!confirm("¿Eliminar este suplemento?"))return;S.supl.items=S.supl.items.filter(x=>x.id!==iid);save();closePage();}
 const TITLES={perfil:"Perfil",hoy:"Hoy",planificar:"Planificar",comida:"Nutrición",avisos:"Avisos"};
+/* ---------- RETRASAR EL HORARIO DE HOY ----------
+   Mueve los bloques de hoy X minutos. Las clases NO se mueven (la universidad no espera);
+   el sueño de la mañana se alarga, y si un bloque acaba chocando con una clase, se recorta. */
+function openShift(){statsActive=false;pageReturn=renderHoy;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";
+  document.getElementById("pageTitle").textContent="Retrasar el horario de hoy";
+  document.getElementById("page").classList.add("show");window.scrollTo(0,0);renderShift();}
+function renderShift(){
+  const u=S.shiftUndo&&S.shiftUndo.date===isoToday()?S.shiftUndo:null;
+  const opt=[15,30,45,60,90];
+  let h=`<div class="note" style="margin-bottom:12px">¿Te has dormido o vas tarde? Elige cuánto retrasar el resto del día. <b>Las clases no se mueven</b>, y si algo acaba chocando con una clase, se recorta para que no se solape.</div>`;
+  h+=`<div class="card"><div class="label">Retrasar</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">`+
+     opt.map(m=>`<button class="btn" onclick="shiftToday(${m})">+${m} min</button>`).join("")+
+     `<button class="btn ghost" onclick="shiftCustom()">Otro…</button></div></div>`;
+  if(u)h+=`<div class="card"><div class="label">Deshacer</div><div class="note" style="margin:0 0 8px">Ya has retrasado el horario de hoy ${u.total} min en total.</div><button class="btn ghost" style="width:100%;color:var(--danger)" onclick="shiftUndo()">Volver al horario original de hoy</button></div>`;
+  const it=daySchedule(todayKey());
+  if(it.length){h+=`<div class="label" style="margin:14px 2px 6px">Horario de hoy</div><div class="card flush">`+
+    it.map((x,i)=>`<div class="row" style="padding:9px 14px"><div class="num" style="flex:0 0 108px;color:var(--faint)">${blkStart(x)}–${minHM(resolveEndMin(it,i))}</div><div class="grow r-t">${esc(blockName(x))}</div>${x.type==='class'?'<span class="tag">fijo</span>':''}</div>`).join("")+`</div>`;}
+  document.getElementById("pageBody").innerHTML=h;}
+function shiftCustom(){const v=prompt("¿Cuántos minutos quieres retrasar?","20");const m=Math.round(+v);if(m>0&&m<=240)shiftToday(m);}
+function shiftToday(mins){
+  const key=curWeekKey(),wd=todayKey(),w=schedWeek(key),arr=w[wd]||[];
+  if(!arr.length){toast("Hoy no tienes horario planificado");return;}
+  if(!S.shiftUndo||S.shiftUndo.date!==isoToday())S.shiftUndo={date:isoToday(),key,wd,blocks:JSON.parse(JSON.stringify(arr)),total:0};
+  const clases=arr.filter(b=>b.type==='class').map(b=>toMin(blkStart(b))).sort((a,b)=>a-b);
+  const cap=v=>Math.min(v,1439);
+  arr.forEach(b=>{
+    if(b.type==='class')return;
+    const s=toMin(blkStart(b)),e=isHM(b.end)?toMin(b.end):null;
+    if(b.type==='sleep'&&s===0){if(e!==null)b.end=minHM(cap(e+mins));return;}
+    let ns=cap(s+mins),ne=e!==null?cap(e+mins):null;
+    const choque=clases.find(c=>c>s);
+    if(choque!==undefined&&ns<choque){if(ne!==null&&ne>choque)ne=choque;}
+    b.start=minHM(ns);if(ne!==null)b.end=(ne>=1439&&e>=1439)?b.end:minHM(ne);
+  });
+  S.shiftUndo.total+=mins;save();toast("Horario de hoy retrasado "+mins+" min");renderShift();}
+function shiftUndo(){const u=S.shiftUndo;if(!u||u.date!==isoToday())return;
+  schedWeek(u.key)[u.wd]=u.blocks;S.shiftUndo=null;save();toast("Horario de hoy restaurado");renderShift();}
 function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);
   requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollTop=6*WKX_HH-16;});}
 const WKX_HH=48;
