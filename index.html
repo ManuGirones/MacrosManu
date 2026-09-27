@@ -353,7 +353,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1a21;border-
 <script>
 /* ---------- almacenamiento ---------- */
 const KEY="manuel_app_v2";let mem={};
-const APP_VERSION="9.9";
+const APP_VERSION="10.0";
 const store={get(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return mem[KEY]||null;}},
   set(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){mem[KEY]=o;}}};
 
@@ -677,7 +677,7 @@ function defaultState(){
     tasks:[{id:id(),time:"06:00",label:"Pesarme en ayunas"}],
     trainings:[],bestMarks:{"500":null,"1000":null,"2000":null,"6000":null},trainDone:{},trainSnooze:{},
     supl:defaultSupl(),
-    weighSnooze:null,lastWeigh:null,lastPlan:null};
+    weighSnooze:null,lastWeigh:null,lastPlan:null,schedMode:"absorb",schedUndo:null};
 }
 function defaultSupl(){return {items:[
  {id:id(),name:"Creatina monohidrato",dose:"5 g",rule:"daily",anchor:"breakfast",off:0,time:"",cert:true,note:"Con el desayuno. La hora da igual; lo importante es no fallar días."},
@@ -694,6 +694,8 @@ function migrate(s){
   const d=defaultState();
   s.perfil=Object.assign({},d.perfil,s.perfil||{});
   if(!s.intensityByDay)s.intensityByDay=d.intensityByDay;
+  if(!s.schedMode)s.schedMode="absorb";
+  if(!("schedUndo" in s))s.schedUndo=null;
   if(!("weekPlan" in s))s.weekPlan=null;
   if(!s.schedule)s.schedule=d.schedule;
   if(!s.weekSchedules){s.weekSchedules={};const k=isoOf(mondayOf(new Date()));s.weekSchedules[k]={};WD.forEach(wd=>{s.weekSchedules[k][wd]=(s.schedule&&Array.isArray(s.schedule[wd]))?s.schedule[wd]:[];});}
@@ -1485,11 +1487,36 @@ function renderSchedule(){
   WD.forEach(d=>{const b=document.createElement("button");b.className="pill"+(d===selWeekday?" on":"");b.textContent=WDLABEL[d];b.onclick=()=>{selWeekday=d;copySel=new Set();renderSchedule();};wp.appendChild(b);});
   document.getElementById("schedCoverage").innerHTML=coverageBar(selWeekday,wk)+gapsNote(selWeekday,wk);
   const list=document.getElementById("schedList");list.innerHTML="";const items=daySchedule(selWeekday,wk);
-  if(!items.length)list.innerHTML='<div class="empty" style="padding:18px 10px">Día libre. '+(locked?"Selecciona una semana siguiente para editar.":"Añade un bloque abajo.")+'</div>';
-  items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.padding="12px 0";
-    const end=isHM(it.end)?it.end:minHM(resolveEndMin(items,i))+"*";
-    r.innerHTML=`<div class="tl-time num" style="flex:0 0 96px">${blkStart(it)}–${end}</div><div class="grow"><div class="r-t">${esc(blockName(it))}</div></div>${typeTag(it.type)}${locked?"":'<button class="btn-del">×</button>'}`;
-    if(!locked){r.querySelector(".btn-del").onclick=()=>{const w=schedWeek(wk);w[selWeekday]=(w[selWeekday]||[]).filter(x=>x!==it);save();renderSchedule();};}list.appendChild(r);});
+  if(!locked){const md=schedMode();const und=schedUndoAvail(wk,selWeekday);
+    const bar=document.createElement("div");bar.style.margin="10px 0 4px";
+    bar.innerHTML=`<div class="label" style="margin-bottom:6px">Al cambiar la duración de un bloque</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr${und?" auto":""};gap:8px">
+        <button class="btn sm ${md==="absorb"?"teal":"ghost"}" onclick="setSchedMode('absorb')">Absorber</button>
+        <button class="btn sm ${md==="push"?"teal":"ghost"}" onclick="setSchedMode('push')">Empujar</button>
+        ${und?'<button class="btn sm ghost" onclick="schedUndoApply()" style="width:auto;padding:0 14px">↺</button>':""}</div>
+      <div class="note" style="margin-top:6px">${md==="absorb"?"El resto del día se encoge o se estira para compensar. La hora de dormir no se mueve.":"Todo lo posterior se retrasa lo mismo. El día se alarga."} Las clases y los bloques 🔒 no se mueven.</div>`;
+    list.appendChild(bar);}
+  if(!items.length)list.appendChild(Object.assign(document.createElement("div"),{className:"empty",style:"padding:18px 10px",textContent:locked?"Día libre. Selecciona una semana siguiente para editar.":"Día libre. Añade un bloque abajo."}));
+  const MM=dayModel(wk,selWeekday);
+  items.forEach((it,i)=>{const r=document.createElement("div");r.className="row";r.style.cssText="padding:10px 0;display:block";
+    const s=MM[i]?MM[i].s:toMin(blkStart(it)),e=MM[i]?MM[i].e:resolveEndMin(items,i);const d=e-s;
+    const dtxt=(Math.floor(d/60)?Math.floor(d/60)+" h ":"")+pad(d%60)+" min";
+    const fx=blkFixed(it);
+    r.innerHTML=`<div style="display:flex;align-items:center;gap:8px${locked?"":";cursor:pointer"}"${locked?"":` onclick="openBlockEdit(${i})"`}>
+        <div class="tl-time num" style="flex:0 0 100px">${minHM(s)}–${minHM(e)}</div>
+        <div class="grow"><div class="r-t">${esc(blockName(it))}${fx?' 🔒':''}</div><div class="note" style="margin:1px 0 0">${dtxt}</div></div>
+        ${typeTag(it.type)}</div>`;
+    if(!locked&&!fx){const q=document.createElement("div");
+      q.style.cssText="display:grid;grid-template-columns:repeat(4,1fr) auto;gap:6px;margin-top:8px";
+      q.innerHTML=`<button class="btn sm ghost" onclick="quickDur(${i},-30)">−30</button>
+        <button class="btn sm ghost" onclick="quickDur(${i},-15)">−15</button>
+        <button class="btn sm ghost" onclick="quickDur(${i},15)">+15</button>
+        <button class="btn sm ghost" onclick="quickDur(${i},30)">+30</button>
+        <button class="btn sm ghost" onclick="openBlockEdit(${i})" style="width:auto;padding:0 14px">✎</button>`;
+      r.appendChild(q);}
+    else if(!locked){const q=document.createElement("div");q.style.cssText="margin-top:8px";
+      q.innerHTML=`<button class="btn sm ghost" onclick="openBlockEdit(${i})" style="width:100%">✎ Editar (bloque fijo)</button>`;r.appendChild(q);}
+    list.appendChild(r);});
   const tools=document.getElementById("schedTools");
   if(locked){tools.style.display="none";}
   else{tools.style.display="block";const others=WD.filter(d=>d!==selWeekday);
@@ -1846,6 +1873,175 @@ function shiftToday(mins){
   S.shiftUndo.total+=mins;save();toast("Horario de hoy retrasado "+mins+" min");renderShift();}
 function shiftUndo(){const u=S.shiftUndo;if(!u||u.date!==isoToday())return;
   schedWeek(u.key)[u.wd]=u.blocks;S.shiftUndo=null;save();toast("Horario de hoy restaurado");renderShift();}
+
+/* ================= EDICIÓN EN CADENA DEL HORARIO =================
+   Un bloque se puede editar (inicio, duración, tipo, nombre) y el resto del día
+   se recoloca solo. Dos comportamientos:
+     · ABSORBER  → lo que viene después se encoge/estira. El día acaba a la misma hora.
+     · EMPUJAR   → todo lo posterior se desplaza. El día se alarga.
+   Los bloques marcados como FIJOS (las clases lo son por defecto) no se mueven nunca:
+   lo que choque con ellos se recorta, y si no cabe se elimina avisando.            */
+const MINDUR=10;
+function blkFixed(it){return it.fixed===undefined?it.type==="class":!!it.fixed;}
+function dayModel(wk,wd){const items=daySchedule(wd,wk);
+  return items.map((it,i)=>({it,s:toMin(blkStart(it)),e:Math.min(1439,resolveEndMin(items,i)),fx:blkFixed(it)}));}
+function writeModel(wk,wd,M){const w=schedWeek(wk);
+  w[wd]=M.slice().sort((a,b)=>a.s-b.s).map(m=>{const o=Object.assign({},m.it);
+    o.start=minHM(Math.max(0,Math.min(1439,m.s)));o.end=minHM(Math.max(0,Math.min(1439,m.e)));return o;});}
+function resolveCollisions(M,notes){
+  M.sort((a,b)=>a.s-b.s);
+  const fixed=M.filter(m=>m.fx);
+  M.forEach(m=>{if(m.fx)return;
+    fixed.forEach(f=>{if(m.e<=f.s||m.s>=f.e)return;
+      if(m.s<f.s)m.e=Math.min(m.e,f.s);else m.s=Math.max(m.s,f.e);});});
+  M.sort((a,b)=>a.s-b.s);
+  const out=[];let prevEnd=-1;
+  M.forEach((m,i)=>{
+    if(!m.fx&&m.s<prevEnd)m.s=prevEnd;
+    m.s=Math.max(0,Math.min(1439,m.s));m.e=Math.max(0,Math.min(1439,m.e));
+    if(!m.fx&&m.e-m.s<MINDUR){
+      if(i!==M.length-1){notes.push("«"+blockName(m.it)+"» ya no cabía y se ha quitado");return;}
+      /* el último bloque del día nunca se borra: se recorta el anterior */
+      m.s=Math.max(0,1439-MINDUR);m.e=1439;
+      const pr=out[out.length-1];
+      if(pr&&!pr.fx&&pr.e>m.s)pr.e=Math.max(pr.s+MINDUR,m.s);
+      notes.push("«"+blockName(m.it)+"» se ha quedado al mínimo: el día ya no daba más de sí");
+    }
+    prevEnd=Math.max(prevEnd,m.e);out.push(m);});
+  return out;}
+function schedSnapshot(wk,wd){S.schedUndo={wk,wd,blocks:JSON.parse(JSON.stringify(schedWeek(wk)[wd]||[]))};}
+function schedUndoAvail(wk,wd){const u=S.schedUndo;return u&&u.wk===wk&&u.wd===wd;}
+function schedUndoApply(){const u=S.schedUndo;if(!u)return;schedWeek(u.wk)[u.wd]=u.blocks;S.schedUndo=null;save();renderSchedule();toast("Cambio deshecho");}
+/* Qué cede antes al absorber: estudiar primero; comer y dormir, lo último. */
+const ELASTIC={study:0,other:1,train:2,meal:3,sleep:4};
+function elasticRank(t){return ELASTIC[t]===undefined?2:ELASTIC[t];}
+/* Núcleo: recoloca el día tras cambiar el bloque idx */
+function applyBlockEdit(wk,wd,idx,newStart,newDur,mode,patch){
+  const M=dayModel(wk,wd);if(idx<0||idx>=M.length)return [];
+  const notes=[];const t=M[idx];
+  if(patch)t.it=Object.assign({},t.it,patch);
+  t.fx=blkFixed(t.it);
+  const oldE=t.e;
+  const dur=Math.max(MINDUR,newDur);
+  t.s=Math.max(0,Math.min(1439-MINDUR,newStart));
+  t.e=Math.min(1439,t.s+dur);
+  /* hacia atrás: si se mueve el inicio, el bloque anterior se ajusta */
+  const p=M[idx-1];
+  if(p&&mode!=="only"){
+    if(t.s<p.e){
+      if(p.fx){t.s=Math.min(1439-MINDUR,p.e);t.e=Math.min(1439,t.s+dur);
+        notes.push("Empieza justo después de "+blockName(p.it)+", que es fijo");}
+      else{p.e=Math.max(p.s+MINDUR,t.s);if(p.e>t.s){t.s=p.e;t.e=Math.min(1439,t.s+dur);}}
+    }else if(t.s>p.e&&!p.fx)p.e=t.s;
+  }
+  const delta=t.e-oldE;
+  if(mode!=="only"&&delta!==0){
+    if(mode==="push"){
+      for(let j=idx+1;j<M.length;j++){const b=M[j];
+        if(b.fx){notes.push(blockName(b.it)+" no se ha movido: es fijo");continue;}
+        b.s+=delta;b.e+=delta;}
+    }else if(delta>0){
+      let end=idx+1;while(end<M.length&&!M[end].fx)end++;
+      const win=[];for(let j=idx+1;j<end;j++)win.push(j);
+      const order=win.slice().sort((a,b)=>elasticRank(M[a].it.type)-elasticRank(M[b].it.type)||(M[b].e-M[b].s)-(M[a].e-M[a].s));
+      let carry=delta;const shrink={};
+      for(const j of order){if(carry<=0)break;
+        const k=Math.min(carry,Math.max(0,(M[j].e-M[j].s)-MINDUR));
+        if(k>0){shrink[j]=k;carry-=k;}}
+      let acc=delta;
+      for(let j=idx+1;j<end;j++){const sh=shrink[j]||0;M[j].s+=acc;acc-=sh;M[j].e+=acc;}
+      if(carry>0)notes.push("No cabían "+carry+" min: se han recortado contra "+(M[end]?blockName(M[end].it):"el final del día"));
+    }else{
+      const b=M[idx+1];
+      if(b&&!b.fx)b.s+=delta;else if(b)notes.push("Queda un hueco de "+(-delta)+" min antes de "+blockName(b.it));
+    }
+  }
+  const out=resolveCollisions(M,notes);
+  writeModel(wk,wd,out);save();return notes;}
+
+/* ---- UI: editor de bloque ---- */
+let edIdx=null;
+function schedMode(){return S.schedMode||"absorb";}
+function setSchedMode(m){S.schedMode=m;save();renderSchedule();}
+function quickDur(i,mins){
+  const wk=selSchedWeek,wd=selWeekday;if(!canEditWeek(wk)){toast("Semana bloqueada");return;}
+  const M=dayModel(wk,wd),b=M[i];if(!b)return;
+  if(b.fx){toast("Bloque fijo: desbloquéalo para cambiarlo");return;}
+  schedSnapshot(wk,wd);
+  const notes=applyBlockEdit(wk,wd,i,b.s,(b.e-b.s)+mins,schedMode());
+  renderSchedule();notes.length?toast(notes[0]):toast((mins>0?"+":"")+mins+" min");}
+function openBlockEdit(i){
+  const wk=selSchedWeek,wd=selWeekday;if(!canEditWeek(wk)){toast("Semana bloqueada · elige una semana siguiente");return;}
+  edIdx=i;statsActive=false;pageReturn=renderPlanificar;
+  const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Planificar";
+  document.getElementById("pageTitle").textContent="Editar bloque";
+  document.getElementById("page").classList.add("show");window.scrollTo(0,0);renderBlockEdit();}
+function renderBlockEdit(){
+  const wk=selSchedWeek,wd=selWeekday,M=dayModel(wk,wd),b=M[edIdx];
+  if(!b){closePage();return;}
+  const dur=b.e-b.s;const hh=Math.floor(dur/60),mm=dur%60;
+  const md=schedMode();
+  let h=`<div class="note" style="margin-bottom:12px">${WDLABEL_LONG[wd]} · ${weekLabel(wk)}</div>`;
+  h+=`<div class="card"><div class="label">Empieza</div>
+      <input class="input num" id="ebStart" type="time" value="${minHM(b.s)}" style="margin-bottom:12px">
+      <div class="label">Duración</div>
+      <div class="num" id="ebDurTxt" style="font-size:26px;margin:4px 0 8px">${hh?hh+" h ":""}${pad(mm)} min</div>
+      <input type="hidden" id="ebDur" value="${dur}">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <button class="btn sm" onclick="ebBump(-30)">−30</button>
+        <button class="btn sm" onclick="ebBump(-15)">−15</button>
+        <button class="btn sm" onclick="ebBump(15)">+15</button>
+        <button class="btn sm" onclick="ebBump(30)">+30</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
+        <button class="btn sm ghost" onclick="ebSet(30)">30m</button>
+        <button class="btn sm ghost" onclick="ebSet(60)">1 h</button>
+        <button class="btn sm ghost" onclick="ebSet(120)">2 h</button>
+        <button class="btn sm ghost" onclick="ebSet(240)">4 h</button>
+      </div></div>`;
+  h+=`<div class="card"><div class="label">Tipo</div>
+      <select class="input" id="ebType" onchange="ebTypeChg()">${typeOptions(b.it.type)}</select>
+      <div class="field" id="ebNameF" style="margin-top:10px;${b.it.type==="other"?"":"display:none"}"><label>Nombre</label>
+        <input class="input" id="ebLabel" value="${esc(b.it.type==="other"?(b.it.label||""):"")}" placeholder="Ej: recados, médico…"></div>
+      <div class="divider"></div>
+      <div class="row" style="padding:2px 0"><div class="grow"><div class="r-t">Bloque fijo</div>
+        <div class="note" style="margin:2px 0 0">No se mueve nunca. Las clases lo son por defecto.</div></div>
+        <button class="btn sm ${b.fx?"teal":"ghost"}" id="ebFix" onclick="ebFixTog()" style="width:auto;padding:0 18px">${b.fx?"🔒 Sí":"No"}</button></div></div>`;
+  h+=`<div class="card"><div class="label">Qué pasa con el resto del día</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+        <button class="btn sm ${md==="absorb"?"teal":"ghost"}" onclick="setSchedModeEd('absorb')">Absorber</button>
+        <button class="btn sm ${md==="push"?"teal":"ghost"}" onclick="setSchedModeEd('push')">Empujar</button></div>
+      <div class="note" style="margin-top:8px">${md==="absorb"
+        ?"Lo que viene después se encoge o se estira. El día termina a la misma hora. <b>Es lo que quieres casi siempre.</b>"
+        :"Todo lo posterior se retrasa lo mismo. El día se alarga por el final."}
+        Los bloques fijos no se mueven en ningún caso.</div></div>`;
+  const prev=M.slice(edIdx+1,edIdx+4).map(x=>`<div class="row" style="padding:7px 0"><div class="num" style="flex:0 0 104px;color:var(--faint)">${minHM(x.s)}–${minHM(x.e)}</div><div class="grow r-t">${esc(blockName(x.it))}</div>${x.fx?'<span class="tag">fijo</span>':""}</div>`).join("");
+  if(prev)h+=`<div class="card"><div class="label">Después de este bloque (ahora)</div>${prev}</div>`;
+  h+=`<button class="btn teal" style="width:100%;margin-top:4px" onclick="ebSave()">Guardar y recolocar el día</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px;color:var(--danger)" onclick="ebDel()">Eliminar bloque</button>`;
+  document.getElementById("pageBody").innerHTML=h;}
+function ebDur(){return Math.max(MINDUR,+document.getElementById("ebDur").value||MINDUR);}
+function ebPaint(d){document.getElementById("ebDur").value=d;
+  const hh=Math.floor(d/60),mm=d%60;document.getElementById("ebDurTxt").textContent=(hh?hh+" h ":"")+pad(mm)+" min";}
+function ebBump(m){ebPaint(Math.max(MINDUR,Math.min(1439,ebDur()+m)));}
+function ebSet(m){ebPaint(m);}
+function ebTypeChg(){const t=document.getElementById("ebType").value;
+  document.getElementById("ebNameF").style.display=t==="other"?"block":"none";}
+function ebFixTog(){const wk=selSchedWeek,wd=selWeekday,M=dayModel(wk,wd),b=M[edIdx];if(!b)return;
+  const w=schedWeek(wk),arr=daySchedule(wd,wk),ref=arr[edIdx];ref.fixed=!blkFixed(ref);save();renderBlockEdit();}
+function setSchedModeEd(m){S.schedMode=m;save();renderBlockEdit();}
+function ebSave(){
+  const wk=selSchedWeek,wd=selWeekday;
+  const st=document.getElementById("ebStart").value;if(!isHM(st)){toast("Hora de inicio no válida");return;}
+  const type=document.getElementById("ebType").value;
+  const lbl=type==="other"?document.getElementById("ebLabel").value.trim():typeLabel(type);
+  if(type==="other"&&!lbl){toast("Ponle nombre al bloque");return;}
+  schedSnapshot(wk,wd);
+  const notes=applyBlockEdit(wk,wd,edIdx,toMin(st),ebDur(),schedMode(),{type,label:lbl});
+  closePage();renderSchedule();
+  toast(notes.length?notes[0]:"Día recolocado");}
+function ebDel(){const wk=selSchedWeek,wd=selWeekday,arr=daySchedule(wd,wk),it=arr[edIdx];if(!it)return;
+  schedSnapshot(wk,wd);const w=schedWeek(wk);w[wd]=(w[wd]||[]).filter(x=>x!==it);save();closePage();renderSchedule();toast("Bloque eliminado");}
 function openWeekPreview(){statsActive=false;pageReturn=renderHoy;const b=document.getElementById("pageBack");b.style.display="flex";b.textContent="‹ Hoy";document.getElementById("pageTitle").textContent="Horario semanal";document.getElementById("pageBody").innerHTML=renderWeekPreview();document.getElementById("page").classList.add("show");window.scrollTo(0,0);
   requestAnimationFrame(()=>{const sc=document.getElementById("wkxScroll");if(sc)sc.scrollTop=6*WKX_HH-16;});}
 const WKX_HH=48;
